@@ -34,14 +34,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Fetch all branches
+        run: |
+          git fetch --all  # Isso garante que o Git baixe todas as referências remotas
+
       - name: Set up Git for merge
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
+      - name: Checkout the main branch
+        run: |
+          git checkout main  # Garantir que estamos na branch main
+
+      - name: Checkout the dev branch
+        run: |
+          git checkout -b dev origin/dev  # Cria a branch local dev a partir da remota
+
       - name: Merge dev to main
         run: |
-          git fetch --all
-          git checkout main
+          git checkout main  # Volta para a main
           git merge dev --no-ff -m "Merge PR from dev to main"
           git push origin main
