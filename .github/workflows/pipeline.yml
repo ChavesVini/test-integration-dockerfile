@@ -57,5 +57,5 @@ jobs:
       - name: Merge ${{ github.head_ref }} to ${{ github.base_ref }}
         run: |
           git checkout ${{ github.base_ref }}
-          git merge ${{ github.head_ref }} --no-ff -m
+          git merge ${{ github.head_ref }} --no-ff -m "${{ github.head_ref }} - merge: Merge branch '${{ github.head_ref }}' of ${{ github.server_url }}/${{ github.repository }} into ${{ github.base_ref }}"
           git push origin ${{ github.base_ref }}
