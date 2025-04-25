@@ -1,25 +1,45 @@
-name: Java CI with Maven
+name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - dev
 
 jobs:
-  build:
-
+  ci:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 21
-      uses: actions/setup-java@v3
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build with Maven
-      run: mvn -f ./src/pom.xml clean install
-    - name: Run tests with Maven
-      run: mvn -f ./src/pom.xml test
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK (se for um projeto Java)
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+
+      - name: Install dependencies
+        run: |
+          ./mvnw install
+
+      - name: Run tests
+        run: |
+          ./mvnw test
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Merge PR to main
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git checkout main
+          git merge dev --no-ff -m "Merge PR from dev to main"
+          git push origin main
+
+      - name: Deploy to production (exemplo)
+        run: |
+          ./deploy.sh  # Exemplo, substitua pelo seu processo de deploy
