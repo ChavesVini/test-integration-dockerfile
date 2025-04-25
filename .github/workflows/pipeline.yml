@@ -21,11 +21,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          mvn clean install
+          mvn -f ./src/pom.xml clean install
 
       - name: Run tests
         run: |
-          mvn test
+          mvn -f ./src/pom.xml test
 
   merge:
     needs: ci
