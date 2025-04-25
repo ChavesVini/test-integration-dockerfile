@@ -47,14 +47,14 @@ jobs:
 
       - name: Checkout the main branch
         run: |
-          git checkout main  # Garantir que estamos na branch main
+          git checkout ${{ github.base_ref }}  # Garantir que estamos na branch main
 
       - name: Checkout the dev branch
         run: |
-          git checkout -b dev origin/dev  # Cria a branch local dev a partir da remota
+          git checkout -b ${{ github.head_ref }} origin/${{ github.head_ref }}  # Cria a branch local dev a partir da remota
 
       - name: Merge dev to main
         run: |
-          git checkout main  # Volta para a main
-          git merge dev --no-ff -m "Merge PR from dev to main"
-          git push origin main
+          git checkout ${{ github.base_ref }}   # Volta para a main
+          git merge ${{ github.head_ref }} --no-ff -m "Merge PR from dev to main"
+          git push origin ${{ github.base_ref }}
