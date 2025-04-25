@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI and Auto Merge PR to Main
 
 on:
   pull_request:
@@ -12,34 +12,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up JDK (se for um projeto Java)
-        uses: actions/setup-java@v2
+      - name: Set up JDK (se for um projeto Java, por exemplo)
+        uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
 
       - name: Install dependencies
         run: |
-          ./mvnw install
+          mvn clean install
 
       - name: Run tests
         run: |
-          ./mvnw test
+          mvn test
 
-  deploy:
+  merge:
     needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Merge PR to main
+      - name: Set up Git for merge
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+
+      - name: Merge dev to main
+        run: |
           git checkout main
           git merge dev --no-ff -m "Merge PR from dev to main"
           git push origin main
-
-      - name: Deploy to production (exemplo)
-        run: |
-          ./deploy.sh  # Exemplo, substitua pelo seu processo de deploy
