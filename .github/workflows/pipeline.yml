@@ -29,11 +29,11 @@ jobs:
           mvn -f ./src/pom.xml test
 
   merge:
-    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,14 +41,16 @@ jobs:
       - name: Set up GitHub CLI
         run: |
           curl -fsSL https://cli.github.com/install.sh | bash
-          gh --version
+
+      - name: Obter autor da PR
+        run: |
+          PR_AUTHOR=$(gh pr view "${{ github.event.pull_request.number }}" --json author --jq '.author.login')
+          echo "PR aberta por: $PR_AUTHOR"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for PR
         run: |
-          gh pr merge "$GITHUB_HEAD_REF" \
-            --repo "$GITHUB_REPOSITORY" \
-            --auto \
-            --merge \
-            --body "Merge pull request #${{ github.event.pull_request.number }} from $PR_BRANCH"
+          gh pr merge "${{ github.event.pull_request.number }}" --auto --merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
