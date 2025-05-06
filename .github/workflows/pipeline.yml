@@ -35,11 +35,11 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Set up GitHub CLI
+        uses: cli/cli-action@v2
+        
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up GitHub CLI
-        uses: github/gh-action@v2
 
       - name: Enable auto-merge for PR
         run: |
