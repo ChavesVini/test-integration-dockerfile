@@ -48,6 +48,7 @@ jobs:
           gh pr merge "$GITHUB_HEAD_REF" \
             --repo "$GITHUB_REPOSITORY" \
             --auto \
-            --merge
+            --merge \
+            --body "Merge pull request #${{ github.event.pull_request.number }} from $PR_BRANCH"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
