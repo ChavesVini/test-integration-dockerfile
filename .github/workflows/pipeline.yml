@@ -38,8 +38,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable GitHub CLI
-        uses: cli/cli-action@v2
+      - name: Set up GitHub CLI
+        uses: github/gh-action@v2
 
       - name: Enable auto-merge for PR
         run: |
