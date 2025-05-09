@@ -47,8 +47,8 @@ jobs:
 
       - name: Package application
         run: |
-          mvn -f ./src/pom.xml package
-          mv ./target/vision_back-0.0.1-SNAPSHOT.war ./build/myapp.${{ env.VERSION }}.war
+          mvn -f ./src/pom.xml clean package
+          mv .src/target/vision_back-0.0.1-SNAPSHOT.war ./build/myapp.${{ env.VERSION }}.war
           zip -r ./build/myapp.${{ env.VERSION }}.zip ./build/myapp.${{ env.VERSION }}.war
 
       - name: Push package to Octopus
