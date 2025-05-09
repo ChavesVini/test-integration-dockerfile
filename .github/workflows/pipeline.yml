@@ -65,7 +65,7 @@ jobs:
       - name: Push package to Octopus
         run: |
           octo push \
-            --package ./path/to/package.zip \
+            --package ./build/myapp.${{ env.VERSION }}.zip \
             --replace-existing \
             --server="vision-octopus.octopus.app" \
             --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
