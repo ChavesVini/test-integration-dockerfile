@@ -53,7 +53,6 @@ jobs:
 
       - name: Package application
         run: |
-          mvn -f ./demo/pom.xml clean package
           mv ./target/demo-0.0.1-SNAPSHOT.war ./build/myapp.${{ env.VERSION }}.war
           zip -r ./build/myapp.${{ env.VERSION }}.zip ./build/myapp.${{ env.VERSION }}.war
 
