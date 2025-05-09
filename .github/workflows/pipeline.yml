@@ -32,25 +32,8 @@ jobs:
         id: version
         run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
 
-  tag:
-    needs: ci
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create tag from version
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git tag v${{ env.VERSION }}
-          git push origin v${{ env.VERSION }}
-
   deploy:
-    needs: [ci, tag]
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write
