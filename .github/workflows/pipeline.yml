@@ -28,11 +28,57 @@ jobs:
         run: |
           mvn -f ./src/pom.xml test
 
-      - name: Trigger Spinnaker Pipeline
+      - name: Get version
+        id: version
+        run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
+
+  tag:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create tag from version
         run: |
-          curl -X POST https://localhost:8084/webhooks/webhook-endpoint \
-            -H "Content-Type: application/json" \
-            -d '{
-              "parameter1": "value",
-              "parameter2": "value"
-            }'
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag v${{ env.VERSION }}
+          git push origin v${{ env.VERSION }}
+
+  deploy:
+    needs: [ci, tag]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Octopus CLI
+        run: |
+          curl -s https://octopus.com/downloads/latest/OctopusTools/linux-x64 --output octo.tar.gz
+          mkdir octo
+          tar xzf octo.tar.gz -C octo
+          sudo mv octo/octo /usr/local/bin
+
+      - name: Package application
+        run: |
+          mkdir -p output
+          cp ./src/target/my-app.jar output/
+          octo pack \
+            --id="my-app" \
+            --version="${{ env.VERSION }}" \
+            --basePath="output" \
+            --outFolder="output"
+
+      - name: Push package to Octopus
+        run: |
+          octo push \
+            --package="output/my-app.${{ env.VERSION }}.nupkg" \
+            --server="vision-octopus.octopus.app" \
+            --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
+
+      - name: Create and deploy release
+        run: |
+          octo create-release \
+            --project="testes" \
+            --releaseNumber="${{ env.VERSION }}" \
+            --deployTo="dev" \
+            --server="vision-octopus.octopus.app" \
+            --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
