@@ -36,6 +36,9 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Create tag from version
         run: |
           git config user.name "github-actions"
