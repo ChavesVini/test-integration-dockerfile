@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK (se for um projeto Java, por exemplo)
         uses: actions/setup-java@v3
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Create tag from version
         run: |
@@ -51,8 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
+        uses: actions/checkout@v4
+        
       - name: Install Octopus CLI
         run: |
           curl -s https://octopus.com/downloads/latest/OctopusTools/linux-x64 --output octo.tar.gz
