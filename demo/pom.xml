@@ -60,7 +60,7 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
                 	<fork>false</fork>  <!-- Impede o uso de processo filho -->
-            	</configuration>
+            			</configuration>
 			    </plugin>
 			    <plugin>
 			      <groupId>org.apache.maven.plugins</groupId>
@@ -69,8 +69,7 @@
 			      <configuration>
 			        <release>21</release>
 			      </configuration>
-			    </plugin>
-			  </plugins>
+			</plugin>
 		</plugins>
 	</build>
 
