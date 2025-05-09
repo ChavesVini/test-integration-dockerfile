@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK (se for um projeto Java, por exemplo)
         uses: actions/setup-java@v3
@@ -28,30 +28,53 @@ jobs:
         run: |
           mvn -f ./src/pom.xml test
 
-  merge:
+      - name: Get version
+        id: version
+        run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
+
+  tag:
     needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up GitHub CLI
+      - name: Create tag from version
         run: |
-          curl -fsSL https://cli.github.com/install.sh | bash
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag v${{ env.VERSION }}
+          git push origin v${{ env.VERSION }}
 
-      - name: Obter autor da PR
-        run: |
-          PR_AUTHOR=$(gh pr view "${{ github.event.pull_request.number }}" --json author --jq '.author.login')
-          echo "PR aberta por: $PR_AUTHOR"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  deploy:
+    needs: [ci, tag]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Octopus CLI
+        uses: OctopusDeploy/install-octopus-cli-action@v1
 
-      - name: Enable auto-merge for PR
+      - name: Push package to Octopus
         run: |
-          gh pr merge "${{ github.event.pull_request.number }}" --auto --merge
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          octo push \
+            --package ./path/to/package.zip \
+            --replace-existing \
+            --server="vision-octopus.octopus.app" \
+            --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
+
+      - name: Create and deploy release
+        run: |
+          octo create-release \
+            --project="testes" \
+            --releaseNumber="${{ env.VERSION }}" \
+            --deployTo="dev" \
+            --server="vision-octopus.octopus.app" \
+            --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
