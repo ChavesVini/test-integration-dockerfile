@@ -60,26 +60,13 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Install Octopus CLI
-        run: |
-          curl -s https://octopus.com/downloads/latest/OctopusTools/linux-x64 --output octo.tar.gz
-          mkdir octo
-          tar xzf octo.tar.gz -C octo
-          sudo mv octo/octo /usr/local/bin
-
-      - name: Package application
-        run: |
-          mkdir -p output
-          cp ./src/target/my-app.jar output/
-          octo pack \
-            --id="my-app" \
-            --version="${{ env.VERSION }}" \
-            --basePath="output" \
-            --outFolder="output"
+        uses: OctopusDeploy/install-octopus-cli-action@v1
 
       - name: Push package to Octopus
         run: |
           octo push \
-            --package="output/my-app.${{ env.VERSION }}.nupkg" \
+            --package ./path/to/package.zip \
+            --replace-existing \
             --server="vision-octopus.octopus.app" \
             --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5"
 
