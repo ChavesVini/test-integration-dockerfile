@@ -45,6 +45,12 @@ jobs:
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v1
 
+      - name: Package application
+        run: |
+          mvn -f ./src/pom.xml package
+          mv ./target/myapp-1.0.${{ github.run_number }}.jar ./build/myapp.${{ env.VERSION }}.jar
+          zip -r ./build/myapp.${{ env.VERSION }}.zip ./build/myapp.${{ env.VERSION }}.jar
+
       - name: Push package to Octopus
         run: |
           octo push \
