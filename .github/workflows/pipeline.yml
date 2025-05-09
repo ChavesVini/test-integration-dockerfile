@@ -48,8 +48,8 @@ jobs:
       - name: Package application
         run: |
           mvn -f ./src/pom.xml package
-          mv ./target/myapp-1.0.${{ github.run_number }}.jar ./build/myapp.${{ env.VERSION }}.jar
-          zip -r ./build/myapp.${{ env.VERSION }}.zip ./build/myapp.${{ env.VERSION }}.jar
+          mv ./target/myapp-1.0.${{ github.run_number }}.war ./build/myapp.${{ env.VERSION }}.war
+          zip -r ./build/myapp.${{ env.VERSION }}.zip ./build/myapp.${{ env.VERSION }}.war
 
       - name: Push package to Octopus
         run: |
