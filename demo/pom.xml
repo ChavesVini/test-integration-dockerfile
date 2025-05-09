@@ -61,7 +61,16 @@
 				<configuration>
                 	<fork>false</fork>  <!-- Impede o uso de processo filho -->
             	</configuration>
-			</plugin>
+			    </plugin>
+			    <plugin>
+			      <groupId>org.apache.maven.plugins</groupId>
+			      <artifactId>maven-compiler-plugin</artifactId>
+			      <version>3.11.0</version>
+			      <configuration>
+			        <release>21</release>
+			      </configuration>
+			    </plugin>
+			  </plugins>
 		</plugins>
 	</build>
 
