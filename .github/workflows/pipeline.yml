@@ -22,11 +22,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          mvn -f ./pom.xml clean install
+          mvn -f ./demo/pom.xml clean install
 
       - name: Run tests
         run: |
-          mvn -f ./pom.xml test
+          mvn -f ./demo/pom.xml test
 
       - name: Get version
         id: version
