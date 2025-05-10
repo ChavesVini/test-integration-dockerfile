@@ -12,7 +12,7 @@ jobs:
     env:
           OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
           OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
-          OCTOPUS_SPACE: 'testes'
+          OCTOPUS_SPACE: 'Default'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
