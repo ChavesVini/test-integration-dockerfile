@@ -39,11 +39,10 @@ jobs:
         run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
 
       - name: Deploy via Jenkins
-        shell: pwsh
+        shell: bash
         run: |
-          $uri = "$env:JENKINS_URL/job/$env:JENKINS_JOB/build?token=$env:JENKINS_TOKEN"
-          $pair = "$env:JENKINS_USER:$env:JENKINS_API_TOKEN"
-          curl -Uri $uri -Method Post -Headers @{ Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair)))" }
+          curl -X POST "$JENKINS_URL/job/$JENKINS_JOB/build?token=$JENKINS_TOKEN" \
+            --user "$JENKINS_USER:$JENKINS_API_TOKEN"
         env:
           JENKINS_URL: ${{ secrets.JENKINS_URL }}
           JENKINS_USER: ${{ secrets.JENKINS_USER }}
