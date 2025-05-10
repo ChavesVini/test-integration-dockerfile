@@ -60,4 +60,4 @@ jobs:
           project: 'testes'
           release_number: ${{ steps.create_release.outputs.release_number }}
           environments: |
-            Teste
+            Test
