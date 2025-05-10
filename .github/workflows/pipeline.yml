@@ -57,9 +57,3 @@ jobs:
         with:
           project: 'testes'
           release_number: '1.0.0'
-          environments: |
-            Dev
-            Test
-          variables: |
-            Foo: Bar
-            Fizz: Buzz
