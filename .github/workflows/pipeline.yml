@@ -40,8 +40,9 @@ jobs:
 
       - name: Baixar Octopus CLI
         run: |
-          curl -L https://octopus.com/downloads/latest/octopus-cli/linux-x64 | tar xz
-          sudo mv octo /usr/local/bin
+          curl -L https://octopus.com/downloads/latest/octopus-cli/linux-x64 -o octo.tar.gz
+          tar -xvzf octo.tar.gz
+          sudo mv octo /usr/local/bin/
 
       - name: Fazer upload do artefato para o Octopus
         run: |
