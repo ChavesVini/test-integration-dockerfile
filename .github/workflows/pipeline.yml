@@ -38,16 +38,24 @@ jobs:
         id: version
         run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Baixar Octopus CLI
-        run: |
-          curl -L https://octopus.com/downloads/latest/octopus-cli/linux-x64 -o octo
-          sudo mv octo /usr/local/bin/octo
-          sudo chmod +x /usr/local/bin/octo
+      - name: Install Octopus CLI 🐙
+        uses: OctopusDeploy/install-octopus-cli-action@v3
+        with:
+          version: '*'
 
-      - name: Fazer upload do artefato para o Octopus
-        run: |
-          octo push --package=target/demo.jar --replace --server=https://vision-octopus.octopus.app --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5" --project="teste" --environments="Dev"
+      - name: Create a release in Octopus Deploy 🐙
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
 
-      - name: Iniciar o deploy no Octopus
-        run: |
-          octo deploy-release --releaseNumber=1.0.${{ github.run_number }} --project="teste" --server=https://vision-octopus.octopus.app --apiKey="API-OSAM7LRMAHZN9SFMTSDW1RJ0CLBIX0O5" --deployTo="Dev"
+      - name: Deploy a release in Octopus Deploy 🐙
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'MyProject'
+          release_number: '1.0.0'
+          environments: |
+            Dev
+            Test
+          variables: |
+            Foo: Bar
+            Fizz: Buzz
