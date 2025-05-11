@@ -53,6 +53,7 @@ jobs:
         with:
           project: 'testes'
           release_number: '1.0.${{ github.run_number }}'
+          package_version: '1.0.${{ github.run_number }}'
 
       - name: Deploy release in Octopus Deploy
         uses: OctopusDeploy/deploy-release-action@v3
