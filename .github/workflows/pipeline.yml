@@ -42,19 +42,19 @@ jobs:
         id: version
         run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Install Octopus CLI 🐙
+      - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
         with:
           version: '*'
 
-      - name: Create a release in Octopus Deploy 🐙
+      - name: Create release in Octopus Deploy
         id: create_release
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
           release_number: '1.0.${{ github.run_number }}'
 
-      - name: Deploy a release in Octopus Deploy 🐙
+      - name: Deploy release in Octopus Deploy
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
