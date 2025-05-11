@@ -53,8 +53,6 @@ jobs:
         with:
           project: 'teste'
           release_number: '1.0.${{ github.run_number }}'
-          git_ref: ${{ github.ref }}
-          git_commit: ${{ github.sha }}
 
       - name: Deploy release in Octopus Deploy
         uses: OctopusDeploy/deploy-release-action@v3
@@ -62,4 +60,5 @@ jobs:
           project: 'teste'
           release_number: ${{ steps.create_release.outputs.release_number }}
           environments: |
+            Staging
             
