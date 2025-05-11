@@ -61,7 +61,7 @@ jobs:
         uses: OctopusDeploy/push-package-action@v3
         with:
           packages: |
-            packages/**/*.zip
+            packaging/**/*.zip
 
       - name: Create release in Octopus Deploy
         id: create_release
