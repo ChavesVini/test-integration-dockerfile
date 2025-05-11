@@ -52,6 +52,7 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'teste'
+          channel: 'Default'
           release_number: '1.0.${{ github.run_number }}'
 
       - name: Deploy release in Octopus Deploy
