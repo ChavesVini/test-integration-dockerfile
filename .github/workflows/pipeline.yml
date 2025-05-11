@@ -9,9 +9,13 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+          OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+          OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+          OCTOPUS_SPACE: 'Default'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK (se for um projeto Java, por exemplo)
         uses: actions/setup-java@v3
@@ -20,38 +24,40 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Verify Java version
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          mvn -version
+
       - name: Install dependencies
         run: |
-          mvn -f ./src/pom.xml clean install
+          mvn -f ./demo/pom.xml clean install
 
       - name: Run tests
         run: |
-          mvn -f ./src/pom.xml test
+          mvn -f ./demo/pom.xml test
 
-  merge:
-    needs: ci
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+      - name: Get version
+        id: version
+        run: echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Install Octopus CLI
+        uses: OctopusDeploy/install-octopus-cli-action@v3
+        with:
+          version: '*'
 
-      - name: Set up GitHub CLI
-        run: |
-          curl -fsSL https://cli.github.com/install.sh | bash
+      - name: Create release in Octopus Deploy
+        id: create_release
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: '1.0.${{ github.run_number }}'
 
-      - name: Obter autor da PR
-        run: |
-          PR_AUTHOR=$(gh pr view "${{ github.event.pull_request.number }}" --json author --jq '.author.login')
-          echo "PR aberta por: $PR_AUTHOR"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Enable auto-merge for PR
-        run: |
-          gh pr merge "${{ github.event.pull_request.number }}" --auto --merge
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy release in Octopus Deploy
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'testes'
+          release_number: ${{ steps.create_release.outputs.release_number }}
+          environments: |
+            Staging
