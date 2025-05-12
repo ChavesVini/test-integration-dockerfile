@@ -90,6 +90,7 @@ jobs:
       - name: Push a package to Octopus Deploy
         uses: OctopusDeploy/push-package-action@v3
         with:
+          overwrite_mode: 'IgnoreIfExists'
           packages: |
             packaging/**/*.zip
 
