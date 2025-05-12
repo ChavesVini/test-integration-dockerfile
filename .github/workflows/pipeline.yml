@@ -90,17 +90,19 @@ jobs:
       - name: Create GitHub Release
         if: github.base_ref == 'main'
         uses: softprops/action-gh-release@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: "release-${{ steps.versioning.outputs.version }}"
           name: "Release ${{ steps.versioning.outputs.version }}"
           body: |
             Commits incluídos:
             ${{ github.event.pull_request.body }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Git Tag
         if: startsWith(github.base_ref, 'Sprint-')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
