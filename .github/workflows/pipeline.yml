@@ -48,31 +48,35 @@ jobs:
           git fetch --tags
           git fetch --prune --unshallow || true
 
-          echo git tag
-  
-          LAST_RELEASE=$(git tag --sort=-creatordate | grep '^release-[0-9]\+\.0$' | head -n1)
-      
-          if [ -z "$LAST_RELEASE" ]; then
+          # Obter a última versão de tag no formato version-MAJOR.MINOR.PATCH
+          LAST_TAG=$(git tag --sort=-creatordate | grep '^version-[0-9]\+\.[0-9]\+\.[0-9]\+$' | head -n1)
+          
+          # Se não houver tags, começa a versão com 0.0.0
+          if [ -z "$LAST_TAG" ]; then
             MAJOR=0
+            MINOR=0
+            PATCH=0
           else
-            MAJOR=$(echo "$LAST_RELEASE" | cut -d'-' -f2 | cut -d'.' -f1)
+            # Extrair a versão da última tag
+            MAJOR=$(echo "$LAST_TAG" | cut -d'-' -f2 | cut -d'.' -f1)
+            MINOR=$(echo "$LAST_TAG" | cut -d'-' -f2 | cut -d'.' -f2)
+            PATCH=$(echo "$LAST_TAG" | cut -d'-' -f2 | cut -d'.' -f3)
           fi
-    
+
+          # Se for um PR para a main, incrementa o MAJOR
           if [ "${{ github.base_ref }}" = "main" ]; then
             MAJOR=$((MAJOR + 1))
-            echo "Creating new major release: $MAJOR.0"
-            VERSION="$MAJOR.0.0"
+            MINOR=0
+            PATCH=0
+            VERSION="version-$MAJOR.0.0"
+            echo "Creating new major release: $VERSION"
           else
-            TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.0\.[0-9]\+$" || echo "")
-            if [ -n "$TAGS" ]; then
-              LAST_PATCH=$(echo "$TAGS" | sed -E "s/^$MAJOR\.0\.//" | sort -n | tail -n1)
-              PATCH=$((LAST_PATCH + 1))
-            else
-              PATCH=0
-            fi
-            VERSION="$MAJOR.0.$PATCH"
+            # Se for um PR para Sprint-*, incrementa o PATCH
+            PATCH=$((PATCH + 1))
+            VERSION="version-$MAJOR.$MINOR.$PATCH"
+            echo "Creating new patch release: $VERSION"
           fi
-      
+
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
