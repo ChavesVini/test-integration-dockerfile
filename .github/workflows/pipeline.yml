@@ -46,33 +46,31 @@ jobs:
         id: versioning
         run: |
           git fetch --tags
-      
-          echo "🔍 Verificando última release no GitHub"
-          LAST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "0.0.0")
           
-          if [[ "$LAST_RELEASE" =~ ^([0-9]+)\.0\.[0-9]+$ ]]; then
-            MAJOR="${BASH_REMATCH[1]}"
-          else
+          LAST_MAJOR_TAG=$(git tag --sort=-creatordate | grep -E '^([0-9]+)\.0\.[0-9]+$' | head -n1)
+      
+          if [ -z "$LAST_MAJOR_TAG" ]; then
             MAJOR=0
-          fi
-      
-          MINOR=0
-      
-          echo "🔍 Procurando tags version-${MAJOR}.${MINOR}.x"
-          EXISTING_TAGS=$(git tag | grep "^version-${MAJOR}\.${MINOR}\.[0-9]\+$" || echo "")
-      
-          if [ -z "$EXISTING_TAGS" ]; then
-            PATCH=0
+            MINOR=0
           else
-            LAST_PATCH=$(echo "$EXISTING_TAGS" | sed -E "s/^version-${MAJOR}\.${MINOR}\.//" | sort -n | tail -n1)
-            PATCH=$((LAST_PATCH + 1))
+
+            MAJOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f1)
+            MINOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f2)
           fi
       
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "✅ Próxima versão: $VERSION"
+          PATCH_TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.$MINOR\.[0-9]\+$" || echo "")
       
+          if [ -n "$PATCH_TAGS" ]; then
+            LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^$MAJOR\.$MINOR\.//" | sort -n | tail -n1)
+            PATCH=$((LAST_PATCH + 1))
+          else
+            PATCH=0
+          fi
+    
+          VERSION="$MAJOR.$MINOR.$PATCH"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Versão final: $VERSION"
 
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
