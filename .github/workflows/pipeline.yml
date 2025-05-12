@@ -69,6 +69,9 @@ jobs:
           fi
       
           VERSION="$MAJOR.$MINOR.$PATCH"
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
