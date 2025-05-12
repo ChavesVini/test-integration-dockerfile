@@ -68,12 +68,12 @@ jobs:
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
-            VERSION="version-$MAJOR.0.0"
+            VERSION="$MAJOR.0"
             echo "Creating new major release: $VERSION"
           else
             # Se for um PR para Sprint-*, incrementa o PATCH
             PATCH=$((PATCH + 1))
-            VERSION="version-$MAJOR.$MINOR.$PATCH"
+            VERSION="$MAJOR.$MINOR.$PATCH"
             echo "Creating new patch release: $VERSION"
           fi
 
