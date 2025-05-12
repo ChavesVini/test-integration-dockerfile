@@ -42,36 +42,38 @@ jobs:
         run: |
           mvn -f ./demo/pom.xml test
 
-      - name: Determine next version
+      - name: Determine next version based on last GitHub Release and tags
         id: versioning
         run: |
           git fetch --tags
+          git fetch --prune --unshallow || true
       
-          # Busca o último release (y.0.0)
-          LAST_RELEASE_TAG=$(git tag --sort=-creatordate | grep -E '^[0-9]+\.0\.0$' | head -n1)
+          # Get latest GitHub release tag (e.g., release-1.0)
+          LAST_RELEASE=$(git tag --sort=-creatordate | grep '^release-[0-9]\+\.0$' | head -n1)
       
-          if [ -z "$LAST_RELEASE_TAG" ]; then
-            Y=0
+          if [ -z "$LAST_RELEASE" ]; then
+            MAJOR=0
           else
-            Y=$(echo $LAST_RELEASE_TAG | cut -d'.' -f1)
+            MAJOR=$(echo "$LAST_RELEASE" | cut -d'-' -f2 | cut -d'.' -f1)
           fi
       
-          # Verifica se é release (PR -> main)
+          # If merging to main, increment the MAJOR version and create release tag
           if [ "${{ github.base_ref }}" = "main" ]; then
-            Y=$((Y + 1))
-            X=0
+            MAJOR=$((MAJOR + 1))
+            echo "Creating new major release: $MAJOR.0"
+            VERSION="$MAJOR.0.0"
           else
-            # Conta quantas tags y.0.x existem
-            TAGS=$(git tag --sort=creatordate | grep "^$Y\.0\.[0-9]\+$" || echo "")
+            # Find latest patch for this MAJOR
+            TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.0\.[0-9]\+$" || echo "")
             if [ -n "$TAGS" ]; then
-              LAST_X=$(echo "$TAGS" | sed -E "s/^$Y\.0\.//" | sort -n | tail -n1)
-              X=$((LAST_X + 1))
+              LAST_PATCH=$(echo "$TAGS" | sed -E "s/^$MAJOR\.0\.//" | sort -n | tail -n1)
+              PATCH=$((LAST_PATCH + 1))
             else
-              X=1
+              PATCH=0
             fi
+            VERSION="$MAJOR.0.$PATCH"
           fi
       
-          VERSION="$Y.0.$X"
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
