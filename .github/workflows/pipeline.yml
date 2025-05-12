@@ -138,7 +138,7 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.version }}"
+          release_number: "v${{ steps.versioning.outputs.version }}"
           package_version: "${{ steps.versioning.outputs.version }}"
           packages: |
             "Development:123:${{ steps.versioning.outputs.version }}"
@@ -149,7 +149,7 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.version }}"
+          release_number: "v${{ steps.versioning.outputs.version }}"
           package_version: "${{ steps.versioning.outputs.version }}"
           packages: |
             "Production:123:${{ steps.versioning.outputs.version }}"
