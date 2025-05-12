@@ -47,10 +47,8 @@ jobs:
         run: |
           git fetch --tags
       
-          # Detecta a última tag major release, no formato 'X.0.0'
           LAST_MAJOR_TAG=$(git tag --sort=-creatordate | grep -E '^([0-9]+)\.0\.0$' | head -n1)
       
-          # Se não encontrar nenhuma tag major (como '1.0.0'), começa com '0.0.0'
           if [ -z "$LAST_MAJOR_TAG" ]; then
             MAJOR=0
             MINOR=0
@@ -61,23 +59,16 @@ jobs:
             PATCH=0
           fi
       
-          # Verifica as tags de patch no formato 'MAJOR.MINOR.PATCH'
           PATCH_TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.$MINOR\.[0-9]\+$" || echo "")
       
-          # Se já existirem versões de patch, incrementa o número do PATCH
           if [ -n "$PATCH_TAGS" ]; then
             LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^$MAJOR\.$MINOR\.//" | sort -n | tail -n1)
             PATCH=$((LAST_PATCH + 1))
           else
-            # Se não existir, começa com 1 para o PATCH
             PATCH=1
           fi
       
-          # Define a versão final no formato MAJOR.MINOR.PATCH
           VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Versão final: $VERSION"
 
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
