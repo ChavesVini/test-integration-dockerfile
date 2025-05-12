@@ -73,10 +73,67 @@ jobs:
           packages: |
             "Staging:123:1.0.${{ github.run_number }}"
 
-      - name: Deploy release in Octopus Deploy
-        uses: OctopusDeploy/deploy-release-action@v3
+      - name: Determine next version
+        id: versioning
+        run: |
+          git fetch --tags
+
+          echo "🔍 Procurando tags release-*"
+          RELEASE_TAGS=$(git tag --sort=creatordate | grep '^release-[0-9]\+\.0\.[0-9]\+$' || echo "")
+          COUNT_RELEASES=$(echo "$RELEASE_TAGS" | cut -d'-' -f2 | cut -d'.' -f1 | sort -nu | wc -l)
+          MAJOR_VERSION=$((COUNT_RELEASES + 1))
+
+          PATCH_TAGS=$(git tag --sort=creatordate | grep "^release-$MAJOR_VERSION\.0\.[0-9]\+$" || echo "")
+          if [ -n "$PATCH_TAGS" ]; then
+            LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^release-$MAJOR_VERSION\.0\.//" | sort -n | tail -n1)
+            PATCH=$((LAST_PATCH + 1))
+          else
+            PATCH=0
+          fi
+
+          VERSION="$MAJOR_VERSION.0.$PATCH"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Versão final: $VERSION"
+
+      - name: Create GitHub Release
+        if: github.base_ref == 'main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "release-${{ steps.versioning.outputs.version }}"
+          name: "Release ${{ steps.versioning.outputs.version }}"
+          body: |
+            Commits incluídos:
+            ${{ github.event.pull_request.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Git Tag
+        if: startsWith(github.base_ref, 'Sprint-')
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag "version-${{ steps.versioning.outputs.version }}"
+          git push origin "version-${{ steps.versioning.outputs.version }}"
+
+      - name: Create release in Octopus Deploy (for development)
+        if: startsWith(github.base_ref, 'Sprint-')
+        id: create_release_dev
+        uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: ${{ steps.create_release.outputs.release_number }}
-          environments: |
-            Staging
+          release_number: "${{ steps.versioning.outputs.version }}"
+          package_version: "${{ steps.versioning.outputs.version }}"
+          packages: |
+            "Development:123:${{ steps.versioning.outputs.version }}"
+
+      - name: Create release in Octopus Deploy (for production)
+        if: github.base_ref == 'main'
+        id: create_release_prod
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "${{ steps.versioning.outputs.version }}"
+          package_version: "${{ steps.versioning.outputs.version }}"
+          packages: |
+            "Production:123:${{ steps.versioning.outputs.version }}"
