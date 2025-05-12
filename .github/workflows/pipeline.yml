@@ -42,43 +42,39 @@ jobs:
         run: |
           mvn -f ./demo/pom.xml test
 
-      - name: Determine next version
+      - name: Determine next version based on last GitHub Release and tags
         id: versioning
         run: |
           git fetch --tags
+          git fetch --prune --unshallow || true
+  
+          LAST_RELEASE=$(git tag --sort=-creatordate | grep '^release-[0-9]\+\.0$' | head -n1)
       
-          # Detecta a última tag major release, no formato 'X.0.0'
-          LAST_MAJOR_TAG=$(git tag --sort=-creatordate | grep -E '^([0-9]+)\.0\.0$' | head -n1)
-      
-          # Se não encontrar nenhuma tag major (como '1.0.0'), começa com '0.0.0'
-          if [ -z "$LAST_MAJOR_TAG" ]; then
+          if [ -z "$LAST_RELEASE" ]; then
             MAJOR=0
-            MINOR=0
-            PATCH=0
           else
-            MAJOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f1)
-            MINOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f2)
-            PATCH=0
+            MAJOR=$(echo "$LAST_RELEASE" | cut -d'-' -f2 | cut -d'.' -f1)
+          fi
+    
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            MAJOR=$((MAJOR + 1))
+            echo "Creating new major release: $MAJOR.0"
+            VERSION="$MAJOR.0.0"
+          else
+            TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.0\.[0-9]\+$" || echo "")
+            if [ -n "$TAGS" ]; then
+              LAST_PATCH=$(echo "$TAGS" | sed -E "s/^$MAJOR\.0\.//" | sort -n | tail -n1)
+              PATCH=$((LAST_PATCH + 1))
+            else
+              PATCH=0
+            fi
+            VERSION="$MAJOR.0.$PATCH"
           fi
       
-          # Verifica as tags de patch no formato 'MAJOR.MINOR.PATCH'
-          PATCH_TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.$MINOR\.[0-9]\+$" || echo "")
-      
-          # Se já existirem versões de patch, incrementa o número do PATCH
-          if [ -n "$PATCH_TAGS" ]; then
-            LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^$MAJOR\.$MINOR\.//" | sort -n | tail -n1)
-            PATCH=$((LAST_PATCH + 1))
-          else
-            # Se não existir, começa com 1 para o PATCH
-            PATCH=1
-          fi
-      
-          # Define a versão final no formato MAJOR.MINOR.PATCH
-          VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Versão final: $VERSION"
-
+          
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
         with:
@@ -118,10 +114,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git tag "version-${{ steps.versioning.outputs.version }}"
-          git push origin "version-${{ steps.versioning.outputs.version }}"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+        
+            TAG_NAME="version-${{ steps.versioning.outputs.version }}"
+        
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "Tag $TAG_NAME já existe. Pulando criação."
+            else
+              git tag "$TAG_NAME"
+              git push origin "$TAG_NAME"
+            fi
 
       - name: Create release in Octopus Deploy (for development)
         if: startsWith(github.base_ref, 'Sprint-')
