@@ -3,15 +3,23 @@ name: CI and Auto Merge PR to Main
 on:
   pull_request:
     branches:
+      - Sprint-*
       - dev
       - main
 
 jobs:
   ci:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
+    env:
+          OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+          OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+          OCTOPUS_SPACE: 'Default'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK (se for um projeto Java, por exemplo)
         uses: actions/setup-java@v3
@@ -20,38 +28,119 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Verify Java version
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          mvn -version
+
       - name: Install dependencies
         run: |
-          mvn -f ./src/pom.xml clean install
+          mvn -f ./demo/pom.xml clean install
 
       - name: Run tests
         run: |
-          mvn -f ./src/pom.xml test
+          mvn -f ./demo/pom.xml test
 
-  merge:
-    needs: ci
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up GitHub CLI
+      - name: Determine next version
+        id: versioning
         run: |
-          curl -fsSL https://cli.github.com/install.sh | bash
+          git fetch --tags
+      
+          # Detecta a última tag major release, no formato 'X.0.0'
+          LAST_MAJOR_TAG=$(git tag --sort=-creatordate | grep -E '^([0-9]+)\.0\.0$' | head -n1)
+      
+          # Se não encontrar nenhuma tag major (como '1.0.0'), começa com '0.0.0'
+          if [ -z "$LAST_MAJOR_TAG" ]; then
+            MAJOR=0
+            MINOR=0
+            PATCH=0
+          else
+            MAJOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f1)
+            MINOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f2)
+            PATCH=0
+          fi
+      
+          # Verifica as tags de patch no formato 'MAJOR.MINOR.PATCH'
+          PATCH_TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.$MINOR\.[0-9]\+$" || echo "")
+      
+          # Se já existirem versões de patch, incrementa o número do PATCH
+          if [ -n "$PATCH_TAGS" ]; then
+            LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^$MAJOR\.$MINOR\.//" | sort -n | tail -n1)
+            PATCH=$((LAST_PATCH + 1))
+          else
+            # Se não existir, começa com 1 para o PATCH
+            PATCH=1
+          fi
+      
+          # Define a versão final no formato MAJOR.MINOR.PATCH
+          VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Versão final: $VERSION"
 
-      - name: Obter autor da PR
-        run: |
-          PR_AUTHOR=$(gh pr view "${{ github.event.pull_request.number }}" --json author --jq '.author.login')
-          echo "PR aberta por: $PR_AUTHOR"
+      - name: Install Octopus CLI
+        uses: OctopusDeploy/install-octopus-cli-action@v3
+        with:
+          version: '*'
+
+      - name: Create a Zip package
+        uses: OctopusDeploy/create-zip-package-action@v3
+        with:
+          package_id: '123'
+          version: '${{ steps.versioning.outputs.version }}'
+          output_folder: './packaging'
+          base_path: '.'
+          files: |
+            **/*.*
+        
+      - name: Push a package to Octopus Deploy
+        uses: OctopusDeploy/push-package-action@v3
+        with:
+          overwrite_mode: 'IgnoreIfExists'
+          packages: |
+            packaging/**/*.zip
+
+      - name: Create GitHub Release
+        if: github.base_ref == 'main'
+        uses: softprops/action-gh-release@v1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "release-${{ steps.versioning.outputs.version }}"
+          name: "Release ${{ steps.versioning.outputs.version }}"
+          body: |
+            Commits incluídos:
+            ${{ github.event.pull_request.body }}
 
-      - name: Enable auto-merge for PR
-        run: |
-          gh pr merge "${{ github.event.pull_request.number }}" --auto --merge
+      - name: Create Git Tag
+        if: startsWith(github.base_ref, 'Sprint-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag "version-${{ steps.versioning.outputs.version }}"
+          git push origin "version-${{ steps.versioning.outputs.version }}"
+
+      - name: Create release in Octopus Deploy (for development)
+        if: startsWith(github.base_ref, 'Sprint-')
+        id: create_release_dev
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "${{ steps.versioning.outputs.version }}"
+          package_version: "${{ steps.versioning.outputs.version }}"
+          packages: |
+            "Development:123:${{ steps.versioning.outputs.version }}"
+
+      - name: Create release in Octopus Deploy (for production)
+        if: github.base_ref == 'main'
+        id: create_release_prod
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "${{ steps.versioning.outputs.version }}"
+          package_version: "${{ steps.versioning.outputs.version }}"
+          packages: |
+            "Production:123:${{ steps.versioning.outputs.version }}"
