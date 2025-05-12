@@ -47,7 +47,7 @@ jobs:
         with:
           version: '*'
 
-      - name: Create a Zip package 🐙
+      - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
           package_id: '123'
@@ -62,16 +62,6 @@ jobs:
         with:
           packages: |
             packaging/**/*.zip
-
-      - name: Create release in Octopus Deploy
-        id: create_release
-        uses: OctopusDeploy/create-release-action@v3
-        with:
-          project: 'testes'
-          release_number: '1.0.${{ github.run_number }}'
-          package_version: '1.0.${{ github.run_number }}'
-          packages: |
-            "Staging:123:1.0.${{ github.run_number }}"
 
       - name: Determine next version
         id: versioning
