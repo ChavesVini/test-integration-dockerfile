@@ -47,32 +47,35 @@ jobs:
         run: |
           git fetch --tags
       
-          LAST_MAJOR_TAG=$(git tag --sort=-creatordate | grep -E '^([0-9]+)\.0\.0$' | head -n1)
+          # Busca o último release (y.0.0)
+          LAST_RELEASE_TAG=$(git tag --sort=-creatordate | grep -E '^[0-9]+\.0\.0$' | head -n1)
       
-          if [ -z "$LAST_MAJOR_TAG" ]; then
-            MAJOR=0
-            MINOR=0
-            PATCH=0
+          if [ -z "$LAST_RELEASE_TAG" ]; then
+            Y=0
           else
-            MAJOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f1)
-            MINOR=$(echo $LAST_MAJOR_TAG | cut -d'.' -f2)
-            PATCH=0
+            Y=$(echo $LAST_RELEASE_TAG | cut -d'.' -f1)
           fi
       
-          PATCH_TAGS=$(git tag --sort=creatordate | grep "^$MAJOR\.$MINOR\.[0-9]\+$" || echo "")
-      
-          if [ -n "$PATCH_TAGS" ]; then
-            LAST_PATCH=$(echo "$PATCH_TAGS" | sed -E "s/^$MAJOR\.$MINOR\.//" | sort -n | tail -n1)
-            PATCH=$((LAST_PATCH + 1))
+          # Verifica se é release (PR -> main)
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            Y=$((Y + 1))
+            X=0
           else
-            PATCH=1
+            # Conta quantas tags y.0.x existem
+            TAGS=$(git tag --sort=creatordate | grep "^$Y\.0\.[0-9]\+$" || echo "")
+            if [ -n "$TAGS" ]; then
+              LAST_X=$(echo "$TAGS" | sed -E "s/^$Y\.0\.//" | sort -n | tail -n1)
+              X=$((LAST_X + 1))
+            else
+              X=1
+            fi
           fi
       
-          VERSION="$MAJOR.$MINOR.$PATCH"
-          
+          VERSION="$Y.0.$X"
+          echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
+          
       - name: Install Octopus CLI
         uses: OctopusDeploy/install-octopus-cli-action@v3
         with:
