@@ -47,6 +47,8 @@ jobs:
         run: |
           git fetch --tags
           git fetch --prune --unshallow || true
+
+          echo git tag
   
           LAST_RELEASE=$(git tag --sort=-creatordate | grep '^release-[0-9]\+\.0$' | head -n1)
       
