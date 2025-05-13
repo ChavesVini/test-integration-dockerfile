@@ -118,11 +118,20 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.tag_number }}"
+          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
           package_version: "${{ steps.versioning.outputs.tag_number }}"
           packages: |
             "Production:123:${{ steps.versioning.outputs.tag_number }}"
-
+          
+      - name: Deploy a release in Octopus Deploy
+        if: github.base_ref == 'main'
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'Release-${{ steps.versioning.outputs.tag_number }}'
+          release_number: '${{ steps.versioning.outputs.tag_number }}'
+          environments: |
+            Production 
+            
   merge:
     needs: [ci, automatic-deploy]
     runs-on: ubuntu-latest
