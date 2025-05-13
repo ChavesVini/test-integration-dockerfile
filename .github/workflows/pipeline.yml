@@ -3,7 +3,6 @@ name: CI and Auto Merge PR to Main
 on:
   pull_request:
     branches:
-      - Sprint-*
       - dev
       - main
 
