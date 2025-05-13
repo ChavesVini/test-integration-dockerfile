@@ -79,7 +79,7 @@ jobs:
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
           package_id: '123'
-          version: '${{ steps.versioning.outputs.version }}'
+          version: '${{ steps.versioning.outputs.tag_number }}'
           output_folder: './packaging'
           base_path: '.'
           files: |
@@ -99,7 +99,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: "release-${{ steps.versioning.outputs.tag_number }}"
-          name: "Sprint-${{ steps.versioning.outputs.release_number }}"
+          name: "Sprint-${{ steps.versioning.outputs.tag_number }}"
           body: |
             Commits incluídos:
             ${{ github.event.pull_request.body }}
@@ -121,10 +121,10 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.version }}"
-          package_version: "${{ steps.versioning.outputs.version }}"
+          release_number: "v${{ steps.versioning.outputs.tag_number }}"
+          package_version: "${{ steps.versioning.outputs.tag_number }}"
           packages: |
-            "Production:123:${{ steps.versioning.outputs.version }}"
+            "Production:123:${{ steps.versioning.outputs.tag_number }}"
 
   merge:
     needs: ci
