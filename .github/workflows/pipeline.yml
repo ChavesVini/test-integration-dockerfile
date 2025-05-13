@@ -98,7 +98,7 @@ jobs:
         uses: OctopusDeploy/push-package-action@v3
         with:
           packages: |
-            packaging/release-${{ steps.versioning.outputs.tag_number }}.zip
+            packaging/release.${{ steps.versioning.outputs.tag_number }}.zip
 
       - name: Create GitHub Release
         if: github.base_ref == 'main'
