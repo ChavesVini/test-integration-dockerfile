@@ -128,7 +128,7 @@ jobs:
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
-          release_number: '${{ steps.versioning.outputs.tag_number }}'
+          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
           environments: |
             Production 
             
