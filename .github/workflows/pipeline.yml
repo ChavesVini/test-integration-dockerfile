@@ -127,7 +127,7 @@ jobs:
         if: github.base_ref == 'main'
         uses: OctopusDeploy/deploy-release-action@v3
         with:
-          project: 'Release-${{ steps.versioning.outputs.tag_number }}'
+          project: 'testes'
           release_number: '${{ steps.versioning.outputs.tag_number }}'
           environments: |
             Production 
