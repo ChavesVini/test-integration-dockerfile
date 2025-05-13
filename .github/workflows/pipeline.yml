@@ -130,7 +130,7 @@ jobs:
           project: 'testes'
           release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
           environments: |
-            Production 
+            Production
             
   merge:
     needs: [ci, automatic-deploy]
