@@ -120,7 +120,7 @@ jobs:
           release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
           package_version: "${{ steps.versioning.outputs.tag_number }}"
           packages: |
-            "Production:123:${{ steps.versioning.outputs.tag_number }}"
+            "Production:release:${{ steps.versioning.outputs.tag_number }}"
           
       - name: Deploy a release in Octopus Deploy
         if: github.base_ref == 'main'
