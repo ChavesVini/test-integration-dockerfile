@@ -48,6 +48,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Determine next release and tag numbers
         id: versioning
         run: |
