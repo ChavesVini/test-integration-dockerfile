@@ -130,7 +130,7 @@ jobs:
           release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
           environments: |
             Production
-            
+      
   merge:
     needs: [ci, automatic-deploy]
     runs-on: ubuntu-latest
