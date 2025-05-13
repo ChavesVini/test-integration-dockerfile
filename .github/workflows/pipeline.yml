@@ -8,15 +8,8 @@ on:
 
 jobs:
   ci:
-    permissions:
-      contents: write
-      pull-requests: write
     runs-on: ubuntu-latest
-    env:
-          OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
-          OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
-          OCTOPUS_SPACE: 'Default'
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,6 +35,18 @@ jobs:
         run: |
           mvn -f ./demo/pom.xml test
 
+  automatic-deploy:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    env:
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+      OCTOPUS_SPACE: 'Default'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
       - name: Determine next release and tag numbers
         id: versioning
         run: |
@@ -87,7 +92,6 @@ jobs:
       - name: Push a package to Octopus Deploy
         uses: OctopusDeploy/push-package-action@v3
         with:
-          overwrite_mode: 'IgnoreIfExists'
           packages: |
             packaging/**/*.zip
 
