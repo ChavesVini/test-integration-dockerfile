@@ -43,9 +43,6 @@ jobs:
         run: |
           mvn -f ./demo/pom.xml test
 
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2
-
       - name: Determine next release and tag numbers
         id: versioning
         run: |
