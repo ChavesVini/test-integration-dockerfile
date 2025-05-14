@@ -100,7 +100,7 @@ jobs:
             packaging/release.${{ steps.versioning.outputs.tag_number }}.zip
 
       - name: Create GitHub Release
-        if: github.base_ref == 'main'
+        if: github.event.pull_request.base.ref == 'main'
         uses: softprops/action-gh-release@v1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
             ${{ github.event.pull_request.body }}
 
       - name: Create release in Octopus Deploy (for production)
-        if: github.base_ref == 'main'
+        if: github.event.pull_request.base.ref == 'main'
         id: create_release_prod
         uses: OctopusDeploy/create-release-action@v3
         with:
@@ -123,7 +123,7 @@ jobs:
             "Production:release:${{ steps.versioning.outputs.tag_number }}"
           
       - name: Deploy a release in Octopus Deploy
-        if: github.base_ref == 'main'
+        if: github.event.pull_request.base.ref == 'main'
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
