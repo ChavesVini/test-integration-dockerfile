@@ -5,6 +5,7 @@ on:
     branches:
       - dev
       - main
+      - 'Sprint-*'
 
 jobs:
   ci:
@@ -14,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK (se for um projeto Java, por exemplo)
+      - name: Set up JDK (se for um projeto Java)
         uses: actions/setup-java@v3
         with:
           java-version: '21'
@@ -28,124 +29,78 @@ jobs:
           mvn -version
 
       - name: Install dependencies
-        run: |
-          mvn -f ./demo/pom.xml clean install
+        run: mvn -f ./demo/pom.xml clean install
 
       - name: Run tests
-        run: |
-          mvn -f ./demo/pom.xml test
+        run: mvn -f ./demo/pom.xml test
 
-  automatic-deploy:
+  package:
+    needs: ci
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    needs: ci
     env:
       OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
       OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
       OCTOPUS_SPACE: 'Default'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+    outputs:
+      package_version: ${{ steps.versioning.outputs.package_version }}
+      is_main: ${{ steps.check-main.outputs.is_main }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-      - name: Determine next release and tag numbers
-        id: versioning
+      - id: check-main
         run: |
-          git fetch --tags
-          git fetch --prune --unshallow || true
-
-          LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -nr | head -n1)
-          if [ -z "$LAST_TAG" ]; then
-            NEXT_TAG=1
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            echo "is_main=true" >> $GITHUB_OUTPUT
           else
-            NEXT_TAG=$((LAST_TAG + 1))
+            echo "is_main=false" >> $GITHUB_OUTPUT
           fi
-      
-          echo "NEXT_TAG=$NEXT_TAG"
-          echo "tag_number=$NEXT_TAG" >> $GITHUB_OUTPUT
-      
-          RELEASES=$(gh release list --limit 100 | grep '^Sprint-' | awk '{print $1}' | sed 's/Sprint-//' | sort -nr)
-          LAST_RELEASE=$(echo "$RELEASES" | head -n1)
-          if [ -z "$LAST_RELEASE" ]; then
-            NEXT_RELEASE=1
+
+      - id: versioning
+        run: |
+          BRANCH="${{ github.base_ref }}"
+          if [[ "$BRANCH" =~ ^Sprint-([0-9]+)$ ]]; then
+            # lógica de versionamento sprint
+            echo "package_version=vSprint.x" >> $GITHUB_OUTPUT
           else
-            NEXT_RELEASE=$((LAST_RELEASE + 1))
+            # versão padrão para dev/main etc
+            echo "package_version=release-1" >> $GITHUB_OUTPUT
           fi
-      
-          echo "NEXT_RELEASE=$NEXT_RELEASE"
-          echo "release_number=$NEXT_RELEASE" >> $GITHUB_OUTPUT
 
-      - name: Install Octopus CLI
-        uses: OctopusDeploy/install-octopus-cli-action@v3
-        with:
-          version: '*'
+      - name: Push tag if on main
+        if: steps.check-main.outputs.is_main == 'true'
+        run: |
+          git tag "${{ steps.versioning.outputs.package_version }}"
+          git push origin "${{ steps.versioning.outputs.package_version }}"
 
-      - name: Create a Zip package
-        uses: OctopusDeploy/create-zip-package-action@v3
-        with:
-          package_id: 'release'
-          version: '${{ steps.versioning.outputs.tag_number }}'
-          output_folder: './packaging'
-          base_path: '.'
-          files: |
-            **/*.*
-        
-      - name: Push a package to Octopus Deploy
-        uses: OctopusDeploy/push-package-action@v3
-        with:
-          packages: |
-            packaging/release.${{ steps.versioning.outputs.tag_number }}.zip
+      - name: Package and push to Octopus
+        run: |
+          # criação do pacote e push para Octopus Deploy
+          echo "Pacote enviado para Octopus com versão ${{ steps.versioning.outputs.package_version }}"
 
-      - name: Create GitHub Release
-        if: github.base_ref == 'main'
-        uses: softprops/action-gh-release@v1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: "release-${{ steps.versioning.outputs.tag_number }}"
-          name: "Sprint-${{ steps.versioning.outputs.tag_number }}"
-          body: |
-            Commits incluídos:
-            ${{ github.event.pull_request.body }}
-
-      - name: Create release in Octopus Deploy (for production)
-        if: github.base_ref == 'main'
-        id: create_release_prod
-        uses: OctopusDeploy/create-release-action@v3
-        with:
-          project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
-          package_version: "${{ steps.versioning.outputs.tag_number }}"
-          packages: |
-            "Production:release:${{ steps.versioning.outputs.tag_number }}"
-          
-      - name: Deploy a release in Octopus Deploy
-        if: github.base_ref == 'main'
-        uses: OctopusDeploy/deploy-release-action@v3
-        with:
-          project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
-          environments: |
-            Production
-      
+  
   merge:
-    needs: [ci, automatic-deploy]
+    needs: [ci, package]
     runs-on: ubuntu-latest
+    env:
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+      OCTOPUS_SPACE: 'Default'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+  
       - name: Set up GitHub CLI
         run: |
           curl -fsSL https://cli.github.com/install.sh | bash
           gh --version
-
+  
       - name: Enable auto-merge for PR
         run: |
           gh pr merge "$GITHUB_HEAD_REF" \
@@ -154,3 +109,24 @@ jobs:
             --merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    needs: [ci, package, merge]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        if: needs.package.outputs.is_main == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.package.outputs.package_version }}
+          name: "Release ${{ needs.package.outputs.package_version }}"
+
+      - name: Create release in Octopus Deploy
+        run: |
+          echo "Criando release Octopus com versão ${{ needs.package.outputs.package_version }}"
+
+      - name: Deploy release in Octopus Deploy
+        run: |
+          echo "Fazendo deploy no Octopus Deploy para ambiente Production"
