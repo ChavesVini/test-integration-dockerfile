@@ -67,36 +67,39 @@ jobs:
           OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
           OCTOPUS_SPACE: 'Default'
           PROJECT_NAME: 'testes'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set -e
-          set -x
+          LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
+      
+          echo "Última release GitHub (tag): $LAST_GH_RELEASE"
+      
+          RAW_VERSION=${LAST_GH_RELEASE#release-} 
+      
+          MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
+          MAJOR=${MAJOR:-1}
       
           PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
       
           echo "Project ID: $PROJECT_ID"
       
-          LAST_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
+          LAST_OCTOPUS_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
       
-          echo "Última release no Octopus: $LAST_RELEASE"
+          echo "Última release no Octopus: $LAST_OCTOPUS_RELEASE"
+      
+          MINOR=$(echo "$LAST_OCTOPUS_RELEASE" | cut -s -d. -f2)
+          MINOR=${MINOR:-0}
       
           BASE_BRANCH="${GITHUB_REF##*/}"
           echo "Base branch: $BASE_BRANCH"
       
-          if [[ -z "$LAST_RELEASE" || "$LAST_RELEASE" == "null" ]]; then
-            MAJOR=1
-            MINOR=0
-          else
-            MAJOR=$(echo "$LAST_RELEASE" | cut -d. -f1)
-            MINOR=$(echo "$LAST_RELEASE" | cut -s -d. -f2)
-            MINOR=${MINOR:-0}
-          fi
-      
           if [[ "$BASE_BRANCH" == "main" ]]; then
-            NEXT_TAG=$((MAJOR + 1))
-            echo "package_version=$NEXT_TAG" >> $GITHUB_OUTPUT
-            echo "release_name=$NEXT_TAG" >> $GITHUB_OUTPUT
+            NEXT_MAJOR=$((MAJOR + 1))
+            echo "package_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "release_name=$NEXT_MAJOR" >> $GITHUB_OUTPUT
           else
             NEXT_MINOR=$((MINOR + 1))
             echo "package_version=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
