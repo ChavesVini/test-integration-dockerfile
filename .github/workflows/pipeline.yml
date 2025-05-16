@@ -121,6 +121,23 @@ jobs:
           packages: |
             packaging/release.${{ steps.versioning.outputs.package_version }}.zip
 
+      - name: Create release in Octopus Deploy
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "${{ needs.package.outputs.package_version }}"
+          package_version: "${{ needs.package.outputs.package_version }}"
+          packages: |
+            "Development:release:${{ needs.package.outputs.package_version }}"
+
+      - name: Deploy release in Octopus Deploy
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "${{ needs.package.outputs.package_version }}"
+          environments: |
+            Production
+
   release-and-deploy:
     needs: package
     runs-on: ubuntu-latest
