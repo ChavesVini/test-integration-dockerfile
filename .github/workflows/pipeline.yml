@@ -118,8 +118,6 @@ jobs:
           project: 'testes'
           release_number: "${{ steps.versioning.outputs.package_version }}"
           package_version: "${{ steps.versioning.outputs.package_version }}"
-          packages: |
-            "Staging:release:${{ steps.versioning.outputs.package_version }}"
 
       - name: Deploy release in Octopus Deploy (main branch only)
         if: steps.check-main.outputs.is_main == 'true'
