@@ -120,8 +120,7 @@ jobs:
           project: 'testes'
           release_number: "${{ steps.versioning.outputs.package_version }}"
           environments: |
-            ${{ steps.determine-environment.outputs.octo_env }}
-
+            Staging
   release:
     needs: [ci, package]
     if: needs.package.outputs.is_main == 'true'
