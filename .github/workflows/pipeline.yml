@@ -70,16 +70,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          BASE_BRANCH="${GITHUB_REF##*/}"
+          echo "Base branch: $BASE_BRANCH"
+      
+          # Buscar última release do GitHub (para pegar o MAJOR)
           LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
       
           echo "Última release GitHub (tag): $LAST_GH_RELEASE"
       
-          RAW_VERSION=${LAST_GH_RELEASE#release-} 
-      
+          RAW_VERSION=${LAST_GH_RELEASE#release-}
           MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
           MAJOR=${MAJOR:-1}
       
+          # Buscar última release do Octopus (para pegar o MINOR)
           PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
       
@@ -93,20 +97,17 @@ jobs:
           MINOR=$(echo "$LAST_OCTOPUS_RELEASE" | cut -s -d. -f2)
           MINOR=${MINOR:-0}
       
-          BASE_BRANCH="${GITHUB_REF##*/}"
-          echo "Base branch: $BASE_BRANCH"
-      
           if [[ "$BASE_BRANCH" == "main" ]]; then
             NEXT_MAJOR=$((MAJOR + 1))
-            echo "package_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
-            echo "release_name=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "Versão principal incrementada para: $NEXT_MAJOR"
+            echo "package_version=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
+            echo "release_name=release-$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
           else
             NEXT_MINOR=$((MINOR + 1))
-            echo "package_version=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
-            echo "release_name=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
+            echo "Versão secundária incrementada para: $MAJOR.$NEXT_MINOR"
+            echo "package_version=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
+            echo "release_name=release-$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
           fi
-
-          echo "${is_main}"
           
       - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
