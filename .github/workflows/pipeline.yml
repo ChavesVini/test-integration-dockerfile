@@ -61,32 +61,30 @@ jobs:
       - id: versioning
         run: |
           git fetch --tags --unshallow || true
-          BRANCH="${{ github.base_ref }}"
+          
+          # Última tag geral (incluindo subversões)
+          LAST_TAG=$(git tag | grep '^release-[0-9]\+\(\.[0-9]\+\)\?$' | sed 's/release-//' | sort -V | tail -n1)
 
-          if [[ "$BRANCH" == "main" ]]; then
-
-            LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
-            if [[ -z "$LAST_TAG" ]]; then
-              NEXT_TAG=1
-            else
-              NEXT_TAG=$((LAST_TAG + 1))
-            fi
-
-            echo "package_version=${NEXT_TAG}" >> $GITHUB_OUTPUT
-            echo "release_name=${NEXT_TAG}" >> $GITHUB_OUTPUT
-            
+          if [[ -z "$LAST_TAG" ]]; then
+            BASE_TAG=1
+            SUB_TAG=0
           else
-            LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
-            if [[ -z "$LAST_TAG" ]]; then
-              NEXT_TAG=1
-            else
-              NEXT_TAG=$((LAST_TAG + 1))
+            BASE_TAG=$(echo "$LAST_TAG" | cut -d. -f1)
+            SUB_TAG=$(echo "$LAST_TAG" | cut -s -d. -f2)
+            if [[ -z "$SUB_TAG" ]]; then
+              SUB_TAG=0
             fi
-
-            echo "package_version=${NEXT_TAG}" >> $GITHUB_OUTPUT
-            echo "release_name=${NEXT_TAG}" >> $GITHUB_OUTPUT
           fi
 
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            NEXT_TAG=$((BASE_TAG + 1))
+            echo "package_version=${NEXT_TAG}" >> $GITHUB_OUTPUT
+            echo "release_name=${NEXT_TAG}" >> $GITHUB_OUTPUT
+          else
+            NEXT_SUB=$((SUB_TAG + 1))
+            echo "package_version=${BASE_TAG}.${NEXT_SUB}" >> $GITHUB_OUTPUT
+            echo "release_name=${BASE_TAG}.${NEXT_SUB}" >> $GITHUB_OUTPUT
+          fi
       - name: Push tag if on main
         if: steps.check-main.outputs.is_main == 'true'
         run: |
