@@ -98,7 +98,7 @@ jobs:
       - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
-          package_id: 'release'
+          package_id: '123'
           version: '${{ steps.versioning.outputs.package_version }}'
           output_folder: './packaging'
           base_path: '.'
