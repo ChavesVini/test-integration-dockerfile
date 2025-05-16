@@ -107,6 +107,28 @@ jobs:
           environments: |
             Staging
 
+  release:
+    needs: [ci, package]
+    if: needs.package.outputs.is_main == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.package.outputs.package_version }}
+          name: "Release ${{ needs.package.outputs.package_version }}"
+          body: |
+            Commits incluídos:
+            ${{ github.event.pull_request.body }}
+
+      - name: Confirm Octopus Release
+        run: |
+          echo "Release registrado no Octopus: ${{ needs.package.outputs.package_version }}"
+
   merge:
     needs: [ci, package]
     runs-on: ubuntu-latest
@@ -131,26 +153,4 @@ jobs:
             --auto \
             --merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release:
-    needs: [ci, package, merge]
-    if: needs.package.outputs.is_main == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.package.outputs.package_version }}
-          name: "Release ${{ needs.package.outputs.package_version }}"
-          body: |
-            Commits incluídos:
-            ${{ github.event.pull_request.body }}
-
-      - name: Confirm Octopus Release
-        run: |
-          echo "Release registrado no Octopus: ${{ needs.package.outputs.package_version }}"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
