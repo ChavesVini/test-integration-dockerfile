@@ -65,29 +65,26 @@ jobs:
 
           if [[ "$BRANCH" == "main" ]]; then
             # Pega o último tag de release
-            LAST_TAG=$(git tag | grep '^v[0-9]\+$' | sed 's/v//' | sort -n | tail -n1)
+            LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
               NEXT_TAG=1
             else
               NEXT_TAG=$((LAST_TAG + 1))
             fi
-            # Cria versão vX.0
-            echo "package_version=v${NEXT_TAG}.0" >> $GITHUB_OUTPUT
-            echo "release_name=v${NEXT_TAG}.0" >> $GITHUB_OUTPUT
+            # Cria a versão para a tag como release-X
+            echo "package_version=release-${NEXT_TAG}" >> $GITHUB_OUTPUT
+            echo "release_name=Sprint-${NEXT_TAG}" >> $GITHUB_OUTPUT
           else
             # Para outras branches (dev, Sprint-*)
-            LAST_TAG=$(git tag | grep '^v[0-9]\+\.[0-9]\+$' | sed 's/v\([0-9]\+\)\.\([0-9]\+\)/\1.\2/' | sort -V | tail -n1)
+            LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
               NEXT_TAG=1
-              NEXT_MINOR=0
             else
-              IFS='.' read -r MAJOR MINOR <<< "$LAST_TAG"
-              NEXT_TAG=$MAJOR
-              NEXT_MINOR=$((MINOR + 1))
+              NEXT_TAG=$((LAST_TAG + 1))
             fi
-            # Cria versão vX.Y
-            echo "package_version=v${NEXT_TAG}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
-            echo "release_name=v${NEXT_TAG}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
+            # Cria a versão para a tag como release-X
+            echo "package_version=release-${NEXT_TAG}" >> $GITHUB_OUTPUT
+            echo "release_name=Sprint-${NEXT_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Push tag if on main
