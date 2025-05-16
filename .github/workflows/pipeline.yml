@@ -90,17 +90,17 @@ jobs:
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
           package_id: 'release'
-          version: '${{ steps.versioning.outputs.tag_number }}'
+          version: '${{ steps.versioning.outputs.package_version }}'  # Use package_version here
           output_folder: './packaging'
           base_path: '.'
           files: |
             **/*.*
-        
+
       - name: Push a package to Octopus Deploy
         uses: OctopusDeploy/push-package-action@v3
         with:
           packages: |
-            packaging/release.${{ steps.versioning.outputs.tag_number }}.zip
+            ./packaging/release-${{ steps.versioning.outputs.package_version }}.zip  # Use package_version here
 
       - name: Create release in Octopus Deploy (for production)
         if: steps.check-main.outputs.is_main == 'true'
