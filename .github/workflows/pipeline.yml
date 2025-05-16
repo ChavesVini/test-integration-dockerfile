@@ -79,14 +79,6 @@ jobs:
       
           echo "Última release GitHub (tag): $LAST_GH_RELEASE"
       
-          # Remover todos os prefixos "release-" corretamente
-          RAW_VERSION=${LAST_GH_RELEASE##release-}
-      
-          if [[ ! "$RAW_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            echo "Formato de versão inválido: $RAW_VERSION"
-            exit 1
-          fi
-      
           MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
           MAJOR=${MAJOR:-1}
       
