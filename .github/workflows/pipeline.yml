@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK (se for um projeto Java)
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           java-version: '21'
@@ -39,12 +39,13 @@ jobs:
     permissions:
       contents: write
     env:
-      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
       OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
       OCTOPUS_SPACE: 'Default'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       package_version: ${{ steps.versioning.outputs.package_version }}
+      release_name: ${{ steps.versioning.outputs.release_name }}
       is_main: ${{ steps.check-main.outputs.is_main }}
     steps:
       - uses: actions/checkout@v4
@@ -62,9 +63,10 @@ jobs:
           git fetch --tags --unshallow || true
           BRANCH="${{ github.base_ref }}"
 
-          if [[ "$BRANCH" =~ ^Sprint-([0-9]+)$ ]]; then
-            SPRINT_NUM="${BASH_REMATCH[1]}"
-            echo "package_version=Sprint-${SPRINT_NUM}" >> $GITHUB_OUTPUT
+          if [[ "$BRANCH" =~ Sprint-([0-9]+) ]]; then
+            NUM="${BASH_REMATCH[1]}"
+            echo "package_version=${NUM}.0.0" >> $GITHUB_OUTPUT
+            echo "release_name=Sprint-${NUM}" >> $GITHUB_OUTPUT
           else
             LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
@@ -72,7 +74,8 @@ jobs:
             else
               NEXT_TAG=$((LAST_TAG + 1))
             fi
-            echo "package_version=release-${NEXT_TAG}" >> $GITHUB_OUTPUT
+            echo "package_version=${NEXT_TAG}.0.0" >> $GITHUB_OUTPUT
+            echo "release_name=release-${NEXT_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Push tag if on main
@@ -80,20 +83,20 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag "${{ steps.versioning.outputs.package_version }}"
-          git push origin "${{ steps.versioning.outputs.package_version }}"
+          git tag "${{ steps.versioning.outputs.release_name }}"
+          git push origin "${{ steps.versioning.outputs.release_name }}"
 
       - name: Package and push to Octopus
         run: |
           echo "Pacote enviado para Octopus com versão ${{ steps.versioning.outputs.package_version }}"
-          # Simulação de empacotamento e push
+          # Aqui você pode adicionar sua lógica real de empacotamento
 
       - name: Create release in Octopus Deploy (for production)
         if: steps.check-main.outputs.is_main == 'true'
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}.0"
+          release_number: "${{ steps.versioning.outputs.package_version }}"
           package_version: "${{ steps.versioning.outputs.package_version }}"
           packages: |
             "Staging:release:${{ steps.versioning.outputs.package_version }}"
@@ -103,7 +106,7 @@ jobs:
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}.0"
+          release_number: "${{ steps.versioning.outputs.package_version }}"
           environments: |
             Staging
 
@@ -111,8 +114,6 @@ jobs:
     needs: [ci, package]
     if: needs.package.outputs.is_main == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -121,8 +122,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.package.outputs.package_version }}
-          name: "Release ${{ needs.package.outputs.package_version }}"
+          tag_name: ${{ needs.package.outputs.release_name }}
+          name: "${{ needs.package.outputs.release_name }}"
           body: |
             Commits incluídos:
             ${{ github.event.pull_request.body }}
@@ -155,4 +156,4 @@ jobs:
             --auto \
             --merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
