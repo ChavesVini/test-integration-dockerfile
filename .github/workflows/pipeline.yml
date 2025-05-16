@@ -46,7 +46,7 @@ jobs:
     outputs:
       package_version: ${{ steps.versioning.outputs.package_version }}
       release_name: ${{ steps.versioning.outputs.release_name }}
-      is_main: ${{ steps.check-main.outputs.is_main }}
+      is_main: ${{ steps.determine-environment.outputs.is_main }}
     steps:
       - uses: actions/checkout@v4
 
