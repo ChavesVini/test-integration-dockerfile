@@ -80,7 +80,38 @@ jobs:
           # criação do pacote e push para Octopus Deploy
           echo "Pacote enviado para Octopus com versão ${{ steps.versioning.outputs.package_version }}"
 
-  
+      - name: Create GitHub Release
+        if: github.event.pull_request.base.ref == 'main'
+        uses: softprops/action-gh-release@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "release-${{ steps.versioning.outputs.tag_number }}"
+          name: "Sprint-${{ steps.versioning.outputs.tag_number }}"
+          body: |
+            Commits incluídos:
+            ${{ github.event.pull_request.body }}
+
+      - name: Create release in Octopus Deploy (for production)
+        if: github.event.pull_request.base.ref == 'main'
+        id: create_release_prod
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
+          package_version: "${{ steps.versioning.outputs.tag_number }}"
+          packages: |
+            "Production:release:${{ steps.versioning.outputs.tag_number }}"
+          
+      - name: Deploy a release in Octopus Deploy
+        if: github.event.pull_request.base.ref == 'main'
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'testes'
+          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
+          environments: |
+            Production
+      
   merge:
     needs: [ci, package]
     runs-on: ubuntu-latest
