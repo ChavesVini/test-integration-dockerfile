@@ -105,6 +105,8 @@ jobs:
             echo "package_version=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
             echo "release_name=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
           fi
+
+          echo "${is_main}"
           
       - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
@@ -138,6 +140,7 @@ jobs:
           release_number: "${{ steps.versioning.outputs.package_version }}"
           environments: |
             Staging
+            
   release:
     needs: [ci, package]
     if: needs.package.outputs.is_main == 'true'
