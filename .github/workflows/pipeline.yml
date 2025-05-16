@@ -65,19 +65,23 @@ jobs:
         env:
           OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
           OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+          OCTOPUS_SPACE: 'Default'
+          PROJECT_NAME: 'testes'
         run: |
-          PROJECT_NAME="testes"
-          SPACE="Default"
+          set -e
+          set -x
       
           PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
-            "$OCTOPUS_URL/api/spaces/all/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
+            "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
+      
+          echo "Project ID: $PROJECT_ID"
       
           LAST_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
-            "$OCTOPUS_URL/api/$SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
+            "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
       
           echo "Última release no Octopus: $LAST_RELEASE"
       
-          BASE_BRANCH="${{ github.base_ref }}"
+          BASE_BRANCH="${GITHUB_REF##*/}"
           echo "Base branch: $BASE_BRANCH"
       
           if [[ -z "$LAST_RELEASE" || "$LAST_RELEASE" == "null" ]]; then
