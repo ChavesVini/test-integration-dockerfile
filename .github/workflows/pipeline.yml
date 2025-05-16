@@ -72,23 +72,33 @@ jobs:
         run: |
           BASE_BRANCH="${{ github.base_ref }}"
           echo "Base branch: $BASE_BRANCH"
-      
-          # Última release do GitHub
+
           LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
+          
+          echo "Última release GitHub (tag): $LAST_GH_RELEASE"
+          
+          # Remover o prefixo "release-" da tag
+          RAW_VERSION=${LAST_GH_RELEASE##release-}
+          
+          if [[ ! "$RAW_VERSION" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Formato de versão inválido: $RAW_VERSION"
+            exit 1
+          fi
+          
+          MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
+          MAJOR=${MAJOR:-1}
       
           echo "Última release GitHub (tag): $LAST_GH_RELEASE"
       
           MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
           MAJOR=${MAJOR:-1}
       
-          # Buscar ID do projeto no Octopus
           PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
       
           echo "Project ID: $PROJECT_ID"
       
-          # Última release no Octopus
           LAST_OCTOPUS_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
       
