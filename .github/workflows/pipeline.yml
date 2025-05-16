@@ -70,10 +70,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          BASE_BRANCH="${GITHUB_REF##*/}"
+          BASE_BRANCH="${{ github.base_ref }}"
           echo "Base branch: $BASE_BRANCH"
       
-          # Buscar última release do GitHub (para pegar o MAJOR)
           LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
       
@@ -83,7 +82,6 @@ jobs:
           MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
           MAJOR=${MAJOR:-1}
       
-          # Buscar última release do Octopus (para pegar o MINOR)
           PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
             "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
       
