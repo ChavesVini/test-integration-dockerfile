@@ -5,6 +5,7 @@ on:
     branches:
       - dev
       - main
+      - 'Sprint-*'
 
 jobs:
   ci:
@@ -14,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK (se for um projeto Java, por exemplo)
+      - name: Set up JDK (se for um projeto Java)
         uses: actions/setup-java@v3
         with:
           java-version: '21'
@@ -28,111 +29,136 @@ jobs:
           mvn -version
 
       - name: Install dependencies
-        run: |
-          mvn -f ./demo/pom.xml clean install
+        run: mvn -f ./demo/pom.xml clean install
 
       - name: Run tests
-        run: |
-          mvn -f ./demo/pom.xml test
+        run: mvn -f ./demo/pom.xml test
 
-  automatic-deploy:
+  package:
+    needs: ci
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    needs: ci
     env:
-      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
-      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
-      OCTOPUS_SPACE: 'Default'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Determine next release and tag numbers
+
+      - name: Fetch all tags and branches
+        run: |
+          git fetch --prune --unshallow || true
+          git fetch --tags
+
+      - name: Determine package version
         id: versioning
         run: |
-          git fetch --tags
-          git fetch --prune --unshallow || true
+          BRANCH="${{ github.base_ref }}"
+          echo "Branch: $BRANCH"
 
-          LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -nr | head -n1)
-          if [ -z "$LAST_TAG" ]; then
-            NEXT_TAG=1
+          if [[ "$BRANCH" =~ ^Sprint-([0-9]+)$ ]]; then
+            SPRINT="${BASH_REMATCH[1]}"
+            echo "This is a Sprint branch: $SPRINT"
+
+            # Get all tags matching vSPRINT.*
+            EXISTING_TAGS=$(git tag -l "v${SPRINT}.*")
+
+            MAX_MINOR=0
+            for tag in $EXISTING_TAGS; do
+              # Extract minor number from tag like v5.3 -> 3
+              MINOR=$(echo $tag | sed -E "s/v${SPRINT}\.([0-9]+)/\1/")
+              if (( MINOR > MAX_MINOR )); then
+                MAX_MINOR=$MINOR
+              fi
+            done
+
+            NEXT_MINOR=$((MAX_MINOR + 1))
+            PACKAGE_VERSION="v${SPRINT}.${NEXT_MINOR}"
+            echo "Next package version: $PACKAGE_VERSION"
+
+            echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+            echo "is_sprint=true" >> $GITHUB_OUTPUT
           else
-            NEXT_TAG=$((LAST_TAG + 1))
-          fi
-      
-          echo "NEXT_TAG=$NEXT_TAG"
-          echo "tag_number=$NEXT_TAG" >> $GITHUB_OUTPUT
-      
-          RELEASES=$(gh release list --limit 100 | grep '^Sprint-' | awk '{print $1}' | sed 's/Sprint-//' | sort -nr)
-          LAST_RELEASE=$(echo "$RELEASES" | head -n1)
-          if [ -z "$LAST_RELEASE" ]; then
-            NEXT_RELEASE=1
-          else
-            NEXT_RELEASE=$((LAST_RELEASE + 1))
-          fi
-      
-          echo "NEXT_RELEASE=$NEXT_RELEASE"
-          echo "release_number=$NEXT_RELEASE" >> $GITHUB_OUTPUT
+            # For main/dev branches, versioning could be different, e.g. release number increment
+            LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -nr | head -n1)
+            if [ -z "$LAST_TAG" ]; then
+              NEXT_TAG=1
+            else
+              NEXT_TAG=$((LAST_TAG + 1))
+            fi
+            PACKAGE_VERSION="release-${NEXT_TAG}"
+            echo "Not a Sprint branch. Using package version: $PACKAGE_VERSION"
 
-      - name: Install Octopus CLI
-        uses: OctopusDeploy/install-octopus-cli-action@v3
-        with:
-          version: '*'
+            echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+            echo "is_sprint=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Create a Zip package
+      - name: Create and push tag if Sprint branch
+        if: steps.versioning.outputs.is_sprint == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.versioning.outputs.package_version }}"
+          git push origin "${{ steps.versioning.outputs.package_version }}"
+
+      - name: Create Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
           package_id: 'release'
-          version: '${{ steps.versioning.outputs.tag_number }}'
+          version: '${{ steps.versioning.outputs.package_version }}'
           output_folder: './packaging'
           base_path: '.'
           files: |
             **/*.*
-        
-      - name: Push a package to Octopus Deploy
+
+      - name: Push package to Octopus Deploy
         uses: OctopusDeploy/push-package-action@v3
         with:
           packages: |
-            packaging/release.${{ steps.versioning.outputs.tag_number }}.zip
+            packaging/release.${{ steps.versioning.outputs.package_version }}.zip
+
+  release-and-deploy:
+    needs: package
+    runs-on: ubuntu-latest
+    if: steps.versioning.outputs.is_sprint == 'false' && (github.base_ref == 'main' || github.base_ref == 'dev')
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
+      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+      OCTOPUS_SPACE: 'Default'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Create GitHub Release
-        if: github.base_ref == 'main'
         uses: softprops/action-gh-release@v1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: "release-${{ steps.versioning.outputs.tag_number }}"
-          name: "Sprint-${{ steps.versioning.outputs.tag_number }}"
+          tag_name: "${{ steps.versioning.outputs.package_version }}"
+          name: "Release ${{ steps.versioning.outputs.package_version }}"
           body: |
             Commits incluídos:
             ${{ github.event.pull_request.body }}
 
-      - name: Create release in Octopus Deploy (for production)
-        if: github.base_ref == 'main'
-        id: create_release_prod
+      - name: Create release in Octopus Deploy
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
-          package_version: "${{ steps.versioning.outputs.tag_number }}"
+          release_number: "${{ steps.versioning.outputs.package_version }}"
+          package_version: "${{ steps.versioning.outputs.package_version }}"
           packages: |
-            "Production:release:${{ steps.versioning.outputs.tag_number }}"
-          
-      - name: Deploy a release in Octopus Deploy
-        if: github.base_ref == 'main'
+            "Production:release:${{ steps.versioning.outputs.package_version }}"
+
+      - name: Deploy release in Octopus Deploy
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
-          release_number: "v${{ steps.versioning.outputs.tag_number }}.0"
+          release_number: "${{ steps.versioning.outputs.package_version }}"
           environments: |
             Production
-      
+
   merge:
-    needs: [ci, automatic-deploy]
+    needs: [ci, package, release-and-deploy]
     runs-on: ubuntu-latest
     permissions:
       contents: write
