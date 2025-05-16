@@ -125,6 +125,8 @@ jobs:
     needs: [ci, package]
     if: needs.package.outputs.is_main == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
