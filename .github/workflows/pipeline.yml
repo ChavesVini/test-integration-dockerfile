@@ -90,7 +90,7 @@ jobs:
         uses: OctopusDeploy/create-zip-package-action@v3
         with:
           package_id: 'release'
-          version: '${{ steps.versioning.outputs.package_version }}'  # Use package_version here
+          version: '${{ steps.versioning.outputs.package_version }}'
           output_folder: './packaging'
           base_path: '.'
           files: |
