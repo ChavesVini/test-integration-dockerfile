@@ -92,8 +92,8 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag "${{ steps.versioning.outputs.release_name }}"
-          git push origin "${{ steps.versioning.outputs.release_name }}"
+          git tag "release-${{ steps.versioning.outputs.release_name }}"
+          git push origin "release-${{ steps.versioning.outputs.release_name }}"
 
       - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
@@ -145,14 +145,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.package.outputs.release_name }}
-          name: "${{ needs.package.outputs.release_name }}"
-          body: |
-            Commits incluídos:
-            ${{ github.event.pull_request.body }}
-
-      - name: Confirm Octopus Release
-        run: |
-          echo "Release registrado no Octopus: ${{ needs.package.outputs.package_version }}"
+          name: "Sprint-${{ needs.package.outputs.release_name }}"
 
   merge:
     needs: [ci, package]
