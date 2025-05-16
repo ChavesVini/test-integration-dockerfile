@@ -62,23 +62,33 @@ jobs:
           fi
 
       - id: versioning
+        env:
+          OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
+          OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
         run: |
-          git fetch --tags --unshallow || true
-
+          PROJECT_NAME="testes"
+          SPACE="Default"
+      
+          PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
+            "$OCTOPUS_URL/api/spaces/all/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
+      
+          LAST_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
+            "$OCTOPUS_URL/api/$SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
+      
+          echo "Última release no Octopus: $LAST_RELEASE"
+      
           BASE_BRANCH="${{ github.base_ref }}"
           echo "Base branch: $BASE_BRANCH"
-
-          LAST_TAG=$(git tag | grep '^release-[0-9]\+\(\.[0-9]\+\)\?$' | sed 's/release-//' | sort -V | tail -n1)
-
-          if [[ -z "$LAST_TAG" ]]; then
+      
+          if [[ -z "$LAST_RELEASE" || "$LAST_RELEASE" == "null" ]]; then
             MAJOR=1
             MINOR=0
           else
-            MAJOR=$(echo "$LAST_TAG" | cut -d. -f1)
-            MINOR=$(echo "$LAST_TAG" | cut -s -d. -f2)
+            MAJOR=$(echo "$LAST_RELEASE" | cut -d. -f1)
+            MINOR=$(echo "$LAST_RELEASE" | cut -s -d. -f2)
             MINOR=${MINOR:-0}
           fi
-
+      
           if [[ "$BASE_BRANCH" == "main" ]]; then
             NEXT_TAG=$((MAJOR + 1))
             echo "package_version=$NEXT_TAG" >> $GITHUB_OUTPUT
