@@ -41,6 +41,9 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      is_sprint: ${{ steps.versioning.outputs.is_sprint }}
+      package_version: ${{ steps.versioning.outputs.package_version }}
 
     steps:
       - name: Checkout code
@@ -61,12 +64,10 @@ jobs:
             SPRINT="${BASH_REMATCH[1]}"
             echo "This is a Sprint branch: $SPRINT"
 
-            # Get all tags matching vSPRINT.*
             EXISTING_TAGS=$(git tag -l "v${SPRINT}.*")
 
             MAX_MINOR=0
             for tag in $EXISTING_TAGS; do
-              # Extract minor number from tag like v5.3 -> 3
               MINOR=$(echo $tag | sed -E "s/v${SPRINT}\.([0-9]+)/\1/")
               if (( MINOR > MAX_MINOR )); then
                 MAX_MINOR=$MINOR
@@ -80,7 +81,6 @@ jobs:
             echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
             echo "is_sprint=true" >> $GITHUB_OUTPUT
           else
-            # For main/dev branches, versioning could be different, e.g. release number increment
             LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -nr | head -n1)
             if [ -z "$LAST_TAG" ]; then
               NEXT_TAG=1
@@ -121,7 +121,7 @@ jobs:
   release-and-deploy:
     needs: package
     runs-on: ubuntu-latest
-    if: steps.versioning.outputs.is_sprint == 'false' && github.base_ref == 'main'
+    if: needs.package.outputs.is_sprint == 'false' && github.base_ref == 'main'
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
@@ -134,8 +134,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "${{ steps.versioning.outputs.package_version }}"
-          name: "Release ${{ steps.versioning.outputs.package_version }}"
+          tag_name: "${{ needs.package.outputs.package_version }}"
+          name: "Release ${{ needs.package.outputs.package_version }}"
           body: |
             Commits incluídos:
             ${{ github.event.pull_request.body }}
@@ -144,16 +144,16 @@ jobs:
         uses: OctopusDeploy/create-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}"
-          package_version: "${{ steps.versioning.outputs.package_version }}"
+          release_number: "${{ needs.package.outputs.package_version }}"
+          package_version: "${{ needs.package.outputs.package_version }}"
           packages: |
-            "Production:release:${{ steps.versioning.outputs.package_version }}"
+            "Production:release:${{ needs.package.outputs.package_version }}"
 
       - name: Deploy release in Octopus Deploy
         uses: OctopusDeploy/deploy-release-action@v3
         with:
           project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}"
+          release_number: "${{ needs.package.outputs.package_version }}"
           environments: |
             Production
 
