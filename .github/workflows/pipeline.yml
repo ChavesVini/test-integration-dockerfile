@@ -63,19 +63,31 @@ jobs:
           git fetch --tags --unshallow || true
           BRANCH="${{ github.base_ref }}"
 
-          if [[ "$BRANCH" =~ Sprint-([0-9]+) ]]; then
-            NUM="${BASH_REMATCH[1]}"
-            echo "package_version=${NUM}.0.0" >> $GITHUB_OUTPUT
-            echo "release_name=Sprint-${NUM}" >> $GITHUB_OUTPUT
-          else
+          if [[ "$BRANCH" == "main" ]]; then
+            # Pega o último tag de release
             LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
               NEXT_TAG=1
             else
               NEXT_TAG=$((LAST_TAG + 1))
             fi
-            echo "package_version=${NEXT_TAG}.0.0" >> $GITHUB_OUTPUT
-            echo "release_name=release-${NEXT_TAG}" >> $GITHUB_OUTPUT
+            # Cria versão vX.0
+            echo "package_version=v${NEXT_TAG}.0" >> $GITHUB_OUTPUT
+            echo "release_name=release-v${NEXT_TAG}.0" >> $GITHUB_OUTPUT
+          else
+            # Para outras branches (dev, Sprint-*)
+            LAST_TAG=$(git tag | grep '^release-v[0-9]\+\.[0-9]\+$' | sed 's/release-v\([0-9]\+\)\.\([0-9]\+\)/\1.\2/' | sort -V | tail -n1)
+            if [[ -z "$LAST_TAG" ]]; then
+              NEXT_TAG=1
+              NEXT_MINOR=0
+            else
+              IFS='.' read -r MAJOR MINOR <<< "$LAST_TAG"
+              NEXT_TAG=$MAJOR
+              NEXT_MINOR=$((MINOR + 1))
+            fi
+            # Cria versão vX.Y
+            echo "package_version=v${NEXT_TAG}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
+            echo "release_name=release-v${NEXT_TAG}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
           fi
 
       - name: Push tag if on main
@@ -101,7 +113,7 @@ jobs:
         with:
           packages: |
             ./packaging/release.${{ steps.versioning.outputs.package_version }}.zip
-            
+
       - name: Create release in Octopus Deploy (for production)
         if: steps.check-main.outputs.is_main == 'true'
         uses: OctopusDeploy/create-release-action@v3
