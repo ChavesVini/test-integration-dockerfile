@@ -40,6 +40,9 @@ jobs:
     permissions:
       contents: write
     env:
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+      OCTOPUS_SPACE: 'Default'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       is_sprint: ${{ steps.versioning.outputs.is_sprint }}
@@ -160,6 +163,11 @@ jobs:
   merge:
     needs: [ci, package, release-and-deploy]
     runs-on: ubuntu-latest
+    env:
+      OCTOPUS_API_KEY: ${{ secrets.API_KEY  }}
+      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
+      OCTOPUS_SPACE: 'Default'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
       pull-requests: write
