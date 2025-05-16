@@ -142,7 +142,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.package.outputs.release_name }}
+          tag_name: "release-${{ needs.package.outputs.release_name }}"
           name: "Sprint-${{ needs.package.outputs.release_name }}"
 
   merge:
