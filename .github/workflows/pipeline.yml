@@ -64,25 +64,25 @@ jobs:
           BRANCH="${{ github.base_ref }}"
 
           if [[ "$BRANCH" == "main" ]]; then
-            # Pega o último tag de release
+
             LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
               NEXT_TAG=1
             else
               NEXT_TAG=$((LAST_TAG + 1))
             fi
-            # Cria a versão para a tag como release-X
+
             echo "package_version=${NEXT_TAG}" >> $GITHUB_OUTPUT
             echo "release_name=${NEXT_TAG}" >> $GITHUB_OUTPUT
+            
           else
-            # Para outras branches (dev, Sprint-*)
             LAST_TAG=$(git tag | grep '^release-[0-9]\+$' | sed 's/release-//' | sort -n | tail -n1)
             if [[ -z "$LAST_TAG" ]]; then
               NEXT_TAG=1
             else
               NEXT_TAG=$((LAST_TAG + 1))
             fi
-            # Cria a versão para a tag como release-X
+
             echo "package_version=${NEXT_TAG}" >> $GITHUB_OUTPUT
             echo "release_name=${NEXT_TAG}" >> $GITHUB_OUTPUT
           fi
