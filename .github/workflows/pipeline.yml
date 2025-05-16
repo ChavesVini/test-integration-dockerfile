@@ -100,7 +100,8 @@ jobs:
         uses: OctopusDeploy/push-package-action@v3
         with:
           packages: |
-            ./packaging/release-${{ steps.versioning.outputs.package_version }}.zip
+            ./packaging/release.${{ steps.versioning.outputs.package_version }}.zip
+            
       - name: Create release in Octopus Deploy (for production)
         if: steps.check-main.outputs.is_main == 'true'
         uses: OctopusDeploy/create-release-action@v3
