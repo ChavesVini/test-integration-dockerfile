@@ -99,12 +99,12 @@ jobs:
             NEXT_MAJOR=$((MAJOR + 1))
             echo "Versão principal incrementada para: $NEXT_MAJOR"
             echo "package_version=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
-            echo "release_name=release-$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
+            echo "release_name=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
           else
             NEXT_MINOR=$((MINOR + 1))
             echo "Versão secundária incrementada para: $MAJOR.$NEXT_MINOR"
             echo "package_version=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
-            echo "release_name=release-$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
+            echo "release_name=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
           fi
           
       - name: Create a Zip package
