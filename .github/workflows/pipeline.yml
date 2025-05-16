@@ -86,11 +86,21 @@ jobs:
           git tag "${{ steps.versioning.outputs.release_name }}"
           git push origin "${{ steps.versioning.outputs.release_name }}"
 
-      - name: Package and push to Octopus
-        run: |
-          echo "Pacote enviado para Octopus com versão ${{ steps.versioning.outputs.package_version }}"
-          # Aqui você pode adicionar sua lógica real de empacotamento
+      - name: Create a Zip package
+        uses: OctopusDeploy/create-zip-package-action@v3
+        with:
+          package_id: 'release'
+          version: '${{ steps.versioning.outputs.package_version }}'
+          output_folder: './packaging'
+          base_path: '.'
+          files: |
+            **/*.*
 
+      - name: Push a package to Octopus Deploy
+        uses: OctopusDeploy/push-package-action@v3
+        with:
+          packages: |
+            ./packaging/release-${{ steps.versioning.outputs.package_version }}.zip
       - name: Create release in Octopus Deploy (for production)
         if: steps.check-main.outputs.is_main == 'true'
         uses: OctopusDeploy/create-release-action@v3
