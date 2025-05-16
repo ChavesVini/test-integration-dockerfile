@@ -46,7 +46,7 @@ jobs:
     outputs:
       package_version: ${{ steps.versioning.outputs.package_version }}
       release_name: ${{ steps.versioning.outputs.release_name }}
-      is_main: ${{ steps.check-main.outputs.is_main }}
+      is_main: ${{ steps.determine-environment.outputs.is_main }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,12 +70,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          BASE_BRANCH="${{ github.base_ref }}"
+          echo "Base branch: $BASE_BRANCH"
+
           LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
+          
+          echo "Última release GitHub (tag): $LAST_GH_RELEASE"
+          
+          # Remover o prefixo "release-" da tag
+          RAW_VERSION=${LAST_GH_RELEASE##release-}
+          
+          if [[ ! "$RAW_VERSION" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Formato de versão inválido: $RAW_VERSION"
+            exit 1
+          fi
+          
+          MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
+          MAJOR=${MAJOR:-1}
       
           echo "Última release GitHub (tag): $LAST_GH_RELEASE"
-      
-          RAW_VERSION=${LAST_GH_RELEASE#release-} 
       
           MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
           MAJOR=${MAJOR:-1}
@@ -93,20 +107,17 @@ jobs:
           MINOR=$(echo "$LAST_OCTOPUS_RELEASE" | cut -s -d. -f2)
           MINOR=${MINOR:-0}
       
-          BASE_BRANCH="${GITHUB_REF##*/}"
-          echo "Base branch: $BASE_BRANCH"
-      
           if [[ "$BASE_BRANCH" == "main" ]]; then
             NEXT_MAJOR=$((MAJOR + 1))
-            echo "package_version=$NEXT_MAJOR" >> $GITHUB_OUTPUT
-            echo "release_name=$NEXT_MAJOR" >> $GITHUB_OUTPUT
+            echo "Versão principal incrementada para: $NEXT_MAJOR"
+            echo "package_version=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
+            echo "release_name=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
           else
             NEXT_MINOR=$((MINOR + 1))
-            echo "package_version=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
-            echo "release_name=${MAJOR}.${NEXT_MINOR}" >> $GITHUB_OUTPUT
+            echo "Versão secundária incrementada para: $MAJOR.$NEXT_MINOR"
+            echo "package_version=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
+            echo "release_name=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
           fi
-
-          echo "${is_main}"
           
       - name: Create a Zip package
         uses: OctopusDeploy/create-zip-package-action@v3
