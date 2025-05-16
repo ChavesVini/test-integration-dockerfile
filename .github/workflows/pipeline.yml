@@ -34,7 +34,7 @@ jobs:
       - name: Run tests
         run: mvn -f ./demo/pom.xml test
 
-    package:
+  package:
     needs: ci
     runs-on: ubuntu-latest
     permissions:
