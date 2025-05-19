@@ -118,56 +118,6 @@ jobs:
             echo "package_version=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
             echo "release_name=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
           fi
-          
-      - name: Create a Zip package
-        uses: OctopusDeploy/create-zip-package-action@v3
-        with:
-          package_id: 'release'
-          version: '${{ steps.versioning.outputs.package_version }}'
-          output_folder: './packaging'
-          base_path: '.'
-          files: |
-            **/*.*
-
-      - name: Push a package to Octopus Deploy
-        uses: OctopusDeploy/push-package-action@v3
-        with:
-          packages: |
-            ./packaging/release.${{ steps.versioning.outputs.package_version }}.zip
-
-      - name: Create release in Octopus Deploy
-        uses: OctopusDeploy/create-release-action@v3
-        with:
-          project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}"
-          package_version: "${{ steps.versioning.outputs.package_version }}"
-          packages: |
-            "${{ steps.determine-environment.outputs.octo_env }}:release:${{ steps.versioning.outputs.package_version }}"
-
-      - name: Deploy release in Octopus Deploy (main branch only)
-        uses: OctopusDeploy/deploy-release-action@v3
-        with:
-          project: 'testes'
-          release_number: "${{ steps.versioning.outputs.package_version }}"
-          environments: |
-            Staging
-            
-  release:
-    needs: [ci, package]
-    if: needs.package.outputs.is_main == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: "release-${{ needs.package.outputs.release_name }}"
-          name: "Sprint-${{ needs.package.outputs.release_name }}"
 
   merge:
     needs: [ci, package]
