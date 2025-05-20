@@ -1,14 +1,13 @@
 services:
   db:
-    image: mysql:latest
+    image: postgres:latest
     restart: always
     environment:
-        MYSQL_ROOT_PASSWORD: teste4
-        MYSQL_DATABASE: teste3
-        MYSQL_USER: teste2
-        MYSQL_PASSWORD: teste1
+        POSTGRES_DATABASE: teste3
+        POSTGRES_USER: teste2
+        POSTGRES_PASSWORD: teste1
     ports:
-      - "3306:3306" 
+      - "5432:5434" 
     volumes:
       - db:/data/mysql 
 volumes:
