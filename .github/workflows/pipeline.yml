@@ -128,7 +128,10 @@ jobs:
       - name: Build with Maven
         run: mvn clean install
         working-directory: ./demo
-    
+
+      - name: List target files
+        run: ls -la ./demo/target
+
       - name: Deploy to Azure Web App (Staging)
         uses: azure/webapps-deploy@v2
         with:
