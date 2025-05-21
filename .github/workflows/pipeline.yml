@@ -114,9 +114,8 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-
-      - name: Debug Secret
-        run: echo "${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" | head -n 5
+      - name: List WAR files
+        run: ls -l ./demo/target/
     
       - name: Deploy to Azure Web App (Staging)
         uses: azure/webapps-deploy@v2
