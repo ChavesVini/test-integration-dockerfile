@@ -39,9 +39,6 @@ jobs:
     permissions:
       contents: write
     env:
-      OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
-      OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
-      OCTOPUS_SPACE: 'Default'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       package_version: ${{ steps.versioning.outputs.package_version }}
@@ -63,61 +60,50 @@ jobs:
 
       - id: versioning
         env:
-          OCTOPUS_API_KEY: ${{ secrets.API_KEY }}
-          OCTOPUS_URL: ${{ secrets.OCTOPUS_URL }}
-          OCTOPUS_SPACE: 'Default'
-          PROJECT_NAME: 'testes'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           BASE_BRANCH="${{ github.base_ref }}"
+          GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
+          
           echo "Base branch: $BASE_BRANCH"
-
-          LAST_GH_RELEASE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" | jq -r '.tag_name')
           
-          echo "Última release GitHub (tag): $LAST_GH_RELEASE"
+          LAST_TAG=$(git ls-remote --tags origin | grep -o 'refs/tags/v[0-9]\+\(\.[0-9]\+\)*' | sort -V | tail -1 | sed 's/refs\/tags\///')
+          echo "Última tag encontrada: $LAST_TAG"
           
-          # Remover o prefixo "release-" da tag
-          RAW_VERSION=${LAST_GH_RELEASE##release-}
-          
-          if [[ ! "$RAW_VERSION" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-            echo "Formato de versão inválido: $RAW_VERSION"
-            exit 1
-          fi
-          
-          MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
-          MAJOR=${MAJOR:-1}
-      
-          echo "Última release GitHub (tag): $LAST_GH_RELEASE"
-      
-          MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
-          MAJOR=${MAJOR:-1}
-      
-          PROJECT_ID=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
-            "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects?partialName=$PROJECT_NAME" | jq -r '.Items[0].Id')
-      
-          echo "Project ID: $PROJECT_ID"
-      
-          LAST_OCTOPUS_RELEASE=$(curl -s -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
-            "$OCTOPUS_URL/api/spaces/$OCTOPUS_SPACE/projects/$PROJECT_ID/releases?order=Descending" | jq -r '.Items[0].Version')
-      
-          echo "Última release no Octopus: $LAST_OCTOPUS_RELEASE"
-      
-          MINOR=$(echo "$LAST_OCTOPUS_RELEASE" | cut -s -d. -f2)
-          MINOR=${MINOR:-0}
-      
-          if [[ "$BASE_BRANCH" == "main" ]]; then
-            NEXT_MAJOR=$((MAJOR + 1))
-            echo "Versão principal incrementada para: $NEXT_MAJOR"
-            echo "package_version=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
-            echo "release_name=$NEXT_MAJOR.0" >> $GITHUB_OUTPUT
+          if [[ -z "$LAST_TAG" ]]; then
+            NEXT_VERSION="1.0"
           else
-            NEXT_MINOR=$((MINOR + 1))
-            echo "Versão secundária incrementada para: $MAJOR.$NEXT_MINOR"
-            echo "package_version=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
-            echo "release_name=$MAJOR.$NEXT_MINOR" >> $GITHUB_OUTPUT
+            RAW_VERSION=${LAST_TAG#v}
+            
+            MAJOR=$(echo "$RAW_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$RAW_VERSION" | cut -d. -f2)
+            MINOR=${MINOR:-0}
+          
+            if [[ "$BASE_BRANCH" == "main" ]]; then
+              NEXT_MAJOR=$((MAJOR + 1))
+              NEXT_VERSION="$NEXT_MAJOR.0"
+            elif [[ "$BASE_BRANCH" == sprint-* ]]; then
+              NEXT_MINOR=$((MINOR + 1))
+              NEXT_VERSION="$MAJOR.$NEXT_MINOR"
+            else
+              NEXT_MINOR=$((MINOR + 1))
+              NEXT_VERSION="$MAJOR.$NEXT_MINOR"
+            fi
           fi
+          
+          echo "Próxima versão: $NEXT_VERSION"
+          VERSION_TAG="v$NEXT_VERSION"
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          git tag $VERSION_TAG
+          git push origin $VERSION_TAG
+          
+          echo "package_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "release_name=$NEXT_VERSION" >> $GITHUB_OUTPUT
 
   merge:
     needs: [ci, package]
@@ -128,8 +114,20 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+    
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Build with Maven
+        run: mvn clean install
+        working-directory: ./demo
+    
+      - name: Deploy to Azure Web App (Staging)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: testes3312
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./demo/target/*.war
 
       - name: Set up GitHub CLI
         run: |
