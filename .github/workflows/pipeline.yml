@@ -114,6 +114,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+    
+      - name: Build with Maven
+        run: mvn -f ./demo/pom.xml clean package
+        
       - name: List WAR files
         run: ls -l ./demo/target/
     
