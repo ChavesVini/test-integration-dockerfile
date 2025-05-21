@@ -3,12 +3,12 @@ services:
     image: postgres:latest
     restart: always
     environment:
-        POSTGRES_DATABASE: teste3
+        POSTGRES_DB: teste3
         POSTGRES_USER: teste2
         POSTGRES_PASSWORD: teste1
     ports:
-      - "5432:5434" 
+      - "5434:5432" 
     volumes:
-      - db:/data/mysql 
+      - db:/var/lib/postgresql/data
 volumes:
   db:
