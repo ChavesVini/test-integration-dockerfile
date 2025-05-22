@@ -10,9 +10,21 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: teste2
+          POSTGRES_PASSWORD: teste1
+          POSTGRES_DB: teste3
+          
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+
 
       - name: Set up JDK
         uses: actions/setup-java@v3
@@ -107,9 +119,19 @@ jobs:
 
   merge:
     needs: [ci, package]
-    runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: teste2
+          POSTGRES_PASSWORD: teste1
+          POSTGRES_DB: teste3
+
     permissions:
       contents: write
       pull-requests: write
