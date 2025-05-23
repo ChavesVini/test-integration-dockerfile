@@ -16,9 +16,9 @@ jobs:
         ports:
           - 5432:5432
         env:
-          AZURE_USER_POSTGRES: ${{ secrets.AZURE_USER_POSTGRES }}
-          AZURE_PASSWORD_POSTGRES: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
           POSTGRES_DB: 'teste3'
+          POSTGRES_USER: ${{ secrets.AZURE_USER_POSTGRES }}
+          POSTGRES_PASSWORD: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
           
     steps:
       - name: Checkout code
@@ -130,9 +130,9 @@ jobs:
         ports:
           - 5432:5432
         env:
+          POSTGRES_DB: 'teste3'
           POSTGRES_USER: ${{ secrets.AZURE_USER_POSTGRES }}
           POSTGRES_PASSWORD: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
-          POSTGRES_DB: 'teste3'
 
     permissions:
       contents: write
