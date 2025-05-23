@@ -128,7 +128,7 @@ jobs:
       postgres:
         image: postgres:15
         ports:
-          - 5432:5432
+          - 5434:5432
         env:
           POSTGRES_DB: 'teste3'
           POSTGRES_USER: ${{ secrets.AZURE_USER_POSTGRES }}
