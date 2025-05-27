@@ -32,11 +32,7 @@ jobs:
 
       - name: Run tests
         run: mvn -f ./demo/pom.xml test
-        env:
-          AZURE_POSTGRESQL_CONNECTIONSTRING: ${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}
-          AZURE_USER_POSTGRES: ${{ secrets.AZURE_USER_POSTGRES }}
-          AZURE_PASSWORD_POSTGRES: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
-
+        
   package:
     needs: ci
     runs-on: ubuntu-latest
@@ -132,10 +128,6 @@ jobs:
       - name: Build with Maven
         working-directory: demo
         run: mvn -B clean package --file pom.xml
-        env:
-          AZURE_POSTGRESQL_CONNECTIONSTRING: ${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}
-          AZURE_USER_POSTGRES: ${{ secrets.AZURE_USER_POSTGRES }}
-          AZURE_PASSWORD_POSTGRES: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
 
       - name: List target files
         run: ls -la ./demo/target
