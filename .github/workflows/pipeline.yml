@@ -10,6 +10,10 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      AZURE_POSTGRESQL_CONNECTIONSTRING: ${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}
+      AZURE_USER_POSTGRES: ${{ secrets.AZURE_USER_POSTGRES }}
+      AZURE_PASSWORD_POSTGRES: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -109,11 +113,14 @@ jobs:
     needs: [ci, package]
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AZURE_POSTGRESQL_CONNECTIONSTRING: ${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}
+      AZURE_USER_POSTGRES: ${{ secrets.AZURE_USER_POSTGRES }}
+      AZURE_PASSWORD_POSTGRES: ${{ secrets.AZURE_PASSWORD_POSTGRES }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
