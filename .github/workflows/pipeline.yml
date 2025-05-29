@@ -131,13 +131,16 @@ jobs:
 
       - name: List target files
         run: ls -la ./demo/target
-
+          
+      - name: Rename WAR to ROOT.war
+        run: mv ./demo/target/demo-0.0.1-SNAPSHOT.war ./demo/target/ROOT.war
+      
       - name: Deploy to Azure Web App (Staging)
         uses: azure/webapps-deploy@v2
         with:
           app-name: testes3312
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./demo/target/demo-0.0.1-SNAPSHOT.war
+          package: ./demo/target/ROOT.war
           
       - name: Set up GitHub CLI
         run: |
