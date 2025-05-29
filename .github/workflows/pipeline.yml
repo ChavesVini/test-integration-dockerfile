@@ -131,18 +131,6 @@ jobs:
 
       - name: List target files
         run: ls -la ./demo/target
-        
-      - name: Permitir IPs do GitHub no Azure
-        run: |
-          IPS=$(curl -s https://api.github.com/meta | jq -r '.actions[]')
-          for ip in $IPS; do
-            az storage account network-rule add \
-              --resource-group testes3312_group \
-              --account-name testes3312 \
-              --ip-address $ip || true
-          done
-        env:
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}
           
       - name: Rename WAR to ROOT.war
         run: mv ./demo/target/demo-0.0.1-SNAPSHOT.war ./demo/target/ROOT.war
